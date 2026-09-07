@@ -46,7 +46,7 @@ export const Route = createFileRoute("/book/$propertyId")({
       ],
     };
   },
-  component: BookingFlow;
+  component: BookingFlow,
 });
 
 const steps = ["Dates", "Guests", "Review", "Price", "Confirm"] as const;
