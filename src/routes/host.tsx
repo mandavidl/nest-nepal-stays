@@ -314,7 +314,7 @@ function AddProperty() {
       pet_friendly: form.petFriendly,
       pet_types: form.petFriendly ? form.petTypes : [],
       pet_restrictions: form.petFriendly ? form.petRestrictions : null,
-      pet_fee: form.petFriendly ? form.petFee : null,
+      pet_fee: form.petFriendly ? form.petFee : 0,
       pet_rules: form.petFriendly ? form.petRules : null,
       host_name: account.name,
       status: "published",
