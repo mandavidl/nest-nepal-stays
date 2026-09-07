@@ -1,198 +1,340 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
-  properties as seedProperties,
-  quote,
-  type CategoryId,
-  type Property,
-} from "./nest-data";
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
+import type { Session, User } from "@supabase/supabase-js";
+import { supabase } from "@/integrations/supabase/client";
+import { properties as demoProperties, type CategoryId, type Property } from "./nest-data";
+import { mapRowToProperty, orderedPhotoPaths, type PropertyRow } from "./property-mapper";
+import { signPhotoPaths } from "./nest-photos";
 
 export type Booking = {
   id: string;
+  reference: string;
   propertyId: string;
   propertyName: string;
   city: string;
   typeLabel: string;
-  image: string;
+  image: string | null;
+  hostName: string;
+  hostPhone: string | null;
   checkIn: string;
   checkOut: string;
   guests: number;
   nights: number;
   total: number;
-  hostName: string;
-  status: "upcoming" | "completed";
+  status: "upcoming" | "completed" | "cancelled";
   reviewed: boolean;
 };
 
-export type Listing = {
-  id: string;
-  name: string;
-  category: CategoryId;
-  address: string;
+export type NewBooking = {
+  propertyId: string;
+  propertyName: string;
   city: string;
-  description: string;
-  price: number;
+  typeLabel: string;
+  image: string | null;
+  hostName: string;
+  hostPhone: string | null;
+  checkIn: string;
+  checkOut: string;
   guests: number;
-  bedrooms: number;
-  beds: number;
-  bathrooms: number;
-  amenities: string[];
-  houseRules: string;
-  photoCount: number;
-  availableFrom: string;
-  status: "published" | "draft";
+  nights: number;
+  total: number;
 };
 
-type Account = { name: string; email: string; signedIn: boolean };
+export type HostListing = {
+  property: Property;
+  row: PropertyRow;
+  photoUrls: Record<string, string>;
+};
+
+export type Profile = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  isHost: boolean;
+};
+
+type Account = { id: string | null; name: string; email: string; phone: string; signedIn: boolean };
 
 type Store = {
-  favorites: string[];
-  toggleFavorite: (id: string) => void;
-  isFavorite: (id: string) => boolean;
-  bookings: Booking[];
-  addBooking: (b: Omit<Booking, "id" | "status" | "reviewed">) => Booking;
-  listings: Listing[];
-  addListing: (l: Omit<Listing, "id">) => Listing;
+  ready: boolean;
+  user: User | null;
   account: Account;
-  signIn: (name: string, email: string) => void;
-  signOut: () => void;
+  catalog: Property[];
+  catalogLoading: boolean;
+  propertyLookup: (id: string) => Property | undefined;
+  favorites: string[];
+  isFavorite: (id: string) => boolean;
+  toggleFavorite: (id: string) => Promise<boolean>;
+  bookings: Booking[];
+  addBooking: (b: NewBooking) => Promise<Booking>;
+  hostListings: HostListing[];
+  refreshHostListings: () => Promise<void>;
+  refreshCatalog: () => Promise<void>;
+  updateProfile: (patch: { name?: string; phone?: string }) => Promise<void>;
+  signOut: () => Promise<void>;
 };
 
 const StoreContext = createContext<Store | null>(null);
 
-const KEY = "nestnepal-state-v1";
-
-const pick = (id: string): Property => {
-  const found = seedProperties.find((p) => p.id === id);
-  if (!found) throw new Error(`Unknown property: ${id}`);
-  return found;
-};
-
-const seedBookings = (): Booking[] => {
-  const upcoming = pick("bandipur-heritage-homestay");
-  const past = pick("mountain-view-apartment");
-  return [
-    {
-      id: "NN-4821",
-      propertyId: upcoming.id,
-      propertyName: upcoming.name,
-      city: upcoming.city,
-      typeLabel: upcoming.typeLabel,
-      image: upcoming.image,
-      checkIn: "2026-10-12",
-      checkOut: "2026-10-15",
-      guests: 2,
-      nights: 3,
-      total: quote(upcoming, 3).total,
-      hostName: upcoming.host.name,
-      status: "upcoming",
-      reviewed: false,
-    },
-    {
-      id: "NN-3947",
-      propertyId: past.id,
-      propertyName: past.name,
-      city: past.city,
-      typeLabel: past.typeLabel,
-      image: past.image,
-      checkIn: "2026-03-04",
-      checkOut: "2026-03-08",
-      guests: 4,
-      nights: 4,
-      total: quote(past, 4).total,
-      hostName: past.host.name,
-      status: "completed",
-      reviewed: true,
-    },
-  ];
-};
-
-const seedListings = (): Listing[] =>
-  [pick("mountain-view-apartment"), pick("nagarkot-sunrise-cabin")].map((p) => ({
-    id: p.id,
-    name: p.name,
-    category: p.category,
-    address: `${p.area}, ${p.city}`,
-    city: p.city,
-    description: p.description,
-    price: p.price,
-    guests: p.guests,
-    bedrooms: p.bedrooms,
-    beds: p.beds,
-    bathrooms: p.bathrooms,
-    amenities: p.amenities as string[],
-    houseRules: p.houseRules.join("\n"),
-    photoCount: p.gallery.length,
-    availableFrom: "2026-09-15",
-    status: "published" as const,
-  }));
+const mapBooking = (row: Record<string, unknown>): Booking => ({
+  id: String(row["id"]),
+  reference: String(row["reference"] ?? ""),
+  propertyId: String(row["property_id"]),
+  propertyName: String(row["property_name"] ?? ""),
+  city: String(row["city"] ?? ""),
+  typeLabel: String(row["type_label"] ?? ""),
+  image: (row["image"] as string | null) ?? null,
+  hostName: String(row["host_name"] ?? ""),
+  hostPhone: (row["host_phone"] as string | null) ?? null,
+  checkIn: String(row["check_in"]),
+  checkOut: String(row["check_out"]),
+  guests: Number(row["guests"] ?? 1),
+  nights: Number(row["nights"] ?? 1),
+  total: Number(row["total"] ?? 0),
+  status: (row["status"] as Booking["status"]) ?? "upcoming",
+  reviewed: Boolean(row["reviewed"]),
+});
 
 export function NestStoreProvider({ children }: { children: ReactNode }) {
+  const [ready, setReady] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [favorites, setFavorites] = useState<string[]>([]);
-  const [bookings, setBookings] = useState<Booking[]>(seedBookings);
-  const [listings, setListings] = useState<Listing[]>(seedListings);
-  const [account, setAccount] = useState<Account>({
-    name: "Mandavi Dhakal",
-    email: "mandavi@example.com",
-    signedIn: true,
-  });
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [hostListings, setHostListings] = useState<HostListing[]>([]);
+  const [dbProperties, setDbProperties] = useState<Property[]>([]);
+  const [catalogLoading, setCatalogLoading] = useState(true);
 
-  useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed.favorites)) setFavorites(parsed.favorites);
-      if (Array.isArray(parsed.bookings) && parsed.bookings.length) setBookings(parsed.bookings);
-      if (Array.isArray(parsed.listings) && parsed.listings.length) setListings(parsed.listings);
-      if (parsed.account) setAccount(parsed.account);
-    } catch {
-      /* ignore corrupt state */
-    }
+  const loadProfile = useCallback(async (u: User) => {
+    const { data } = await supabase
+      .from("profiles")
+      .select("id, full_name, email, phone_number, is_host")
+      .eq("id", u.id)
+      .maybeSingle();
+    setProfile({
+      id: u.id,
+      name: data?.full_name || (u.email?.split("@")[0] ?? "Guest"),
+      email: data?.email || u.email || "",
+      phone: data?.phone_number || "",
+      isHost: Boolean(data?.is_host),
+    });
+  }, []);
+
+  const loadFavorites = useCallback(async () => {
+    const { data } = await supabase.from("favorites").select("property_id");
+    setFavorites((data ?? []).map((f) => f.property_id));
+  }, []);
+
+  const loadBookings = useCallback(async () => {
+    const { data } = await supabase
+      .from("bookings")
+      .select("*")
+      .order("check_in", { ascending: false });
+    setBookings((data ?? []).map((row) => mapBooking(row as Record<string, unknown>)));
+  }, []);
+
+  const refreshHostListings = useCallback(async () => {
+    const { data } = await supabase
+      .from("properties")
+      .select("*")
+      .order("created_at", { ascending: false });
+    const rows = (data ?? []) as unknown as PropertyRow[];
+    const urls = await signPhotoPaths([...new Set(rows.flatMap((r) => orderedPhotoPaths(r)))]);
+    setHostListings(
+      rows.map((row) => ({ row, photoUrls: urls, property: mapRowToProperty(row, urls) })),
+    );
+  }, []);
+
+  const refreshCatalog = useCallback(async () => {
+    setCatalogLoading(true);
+    const { data } = await supabase
+      .from("properties")
+      .select("*")
+      .eq("approval_status", "approved")
+      .eq("status", "published")
+      .order("created_at", { ascending: false });
+    const rows = (data ?? []) as unknown as PropertyRow[];
+    const urls = await signPhotoPaths([...new Set(rows.flatMap((r) => orderedPhotoPaths(r)))]);
+    setDbProperties(rows.map((row) => mapRowToProperty(row, urls)));
+    setCatalogLoading(false);
   }, []);
 
   useEffect(() => {
-    try {
-      window.localStorage.setItem(KEY, JSON.stringify({ favorites, bookings, listings, account }));
-    } catch {
-      /* storage unavailable */
-    }
-  }, [favorites, bookings, listings, account]);
+    let active = true;
 
-  const toggleFavorite = useCallback((id: string) => {
-    setFavorites((prev) => (prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id]));
-  }, []);
-
-  const addBooking = useCallback((b: Omit<Booking, "id" | "status" | "reviewed">) => {
-    const booking: Booking = {
-      ...b,
-      id: `NN-${Math.floor(1000 + Math.random() * 8999)}`,
-      status: "upcoming",
-      reviewed: false,
+    const applySession = async (session: Session | null) => {
+      const nextUser = session?.user ?? null;
+      if (!active) return;
+      setUser(nextUser);
+      if (!nextUser) {
+        setProfile(null);
+        setFavorites([]);
+        setBookings([]);
+        setHostListings([]);
+        setReady(true);
+        return;
+      }
+      await Promise.all([
+        loadProfile(nextUser),
+        loadFavorites(),
+        loadBookings(),
+        refreshHostListings(),
+      ]);
+      if (active) setReady(true);
     };
-    setBookings((prev) => [booking, ...prev]);
-    return booking;
+
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") {
+        void applySession(session);
+      }
+    });
+
+    void supabase.auth.getSession().then(({ data }) => applySession(data.session));
+    void refreshCatalog();
+
+    return () => {
+      active = false;
+      sub.subscription.unsubscribe();
+    };
+  }, [loadProfile, loadFavorites, loadBookings, refreshHostListings, refreshCatalog]);
+
+  const catalog = useMemo(() => [...dbProperties, ...demoProperties], [dbProperties]);
+
+  const propertyLookup = useCallback(
+    (id: string) =>
+      dbProperties.find((p) => p.id === id) ??
+      demoProperties.find((p) => p.id === id) ??
+      hostListings.find((l) => l.property.id === id)?.property,
+    [dbProperties, hostListings],
+  );
+
+  const toggleFavorite = useCallback(
+    async (id: string) => {
+      if (!user) return false;
+      const saved = favorites.includes(id);
+      setFavorites((prev) => (saved ? prev.filter((f) => f !== id) : [...prev, id]));
+      if (saved) {
+        await supabase.from("favorites").delete().eq("property_id", id).eq("user_id", user.id);
+      } else {
+        await supabase.from("favorites").insert({ property_id: id, user_id: user.id });
+      }
+      return true;
+    },
+    [favorites, user],
+  );
+
+  const addBooking = useCallback(
+    async (b: NewBooking) => {
+      if (!user) throw new Error("Please log in to confirm this booking.");
+      const { data, error } = await supabase
+        .from("bookings")
+        .insert({
+          guest_id: user.id,
+          property_id: b.propertyId,
+          property_name: b.propertyName,
+          city: b.city,
+          type_label: b.typeLabel,
+          image: b.image,
+          host_name: b.hostName,
+          host_phone: b.hostPhone,
+          check_in: b.checkIn,
+          check_out: b.checkOut,
+          guests: b.guests,
+          nights: b.nights,
+          total: b.total,
+        })
+        .select("*")
+        .single();
+      if (error) throw new Error(error.message);
+      const booking = mapBooking(data as Record<string, unknown>);
+      setBookings((prev) => [booking, ...prev]);
+      return booking;
+    },
+    [user],
+  );
+
+  const updateProfile = useCallback(
+    async (patch: { name?: string; phone?: string }) => {
+      if (!user) return;
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          ...(patch.name !== undefined ? { full_name: patch.name } : {}),
+          ...(patch.phone !== undefined ? { phone_number: patch.phone } : {}),
+        })
+        .eq("id", user.id);
+      if (error) throw new Error(error.message);
+      setProfile((p) =>
+        p ? { ...p, name: patch.name ?? p.name, phone: patch.phone ?? p.phone } : p,
+      );
+    },
+    [user],
+  );
+
+  const signOut = useCallback(async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setProfile(null);
+    setFavorites([]);
+    setBookings([]);
+    setHostListings([]);
   }, []);
 
-  const addListing = useCallback((l: Omit<Listing, "id">) => {
-    const listing: Listing = { ...l, id: `listing-${Date.now()}` };
-    setListings((prev) => [listing, ...prev]);
-    return listing;
-  }, []);
+  const account = useMemo<Account>(
+    () => ({
+      id: user?.id ?? null,
+      name: profile?.name ?? "Guest",
+      email: profile?.email ?? user?.email ?? "",
+      phone: profile?.phone ?? "",
+      signedIn: Boolean(user),
+    }),
+    [profile, user],
+  );
 
   const value = useMemo<Store>(
     () => ({
+      ready,
+      user,
+      account,
+      catalog,
+      catalogLoading,
+      propertyLookup,
       favorites,
-      toggleFavorite,
       isFavorite: (id: string) => favorites.includes(id),
+      toggleFavorite,
       bookings,
       addBooking,
-      listings,
-      addListing,
-      account,
-      signIn: (name, email) => setAccount({ name, email, signedIn: true }),
-      signOut: () => setAccount((a) => ({ ...a, signedIn: false })),
+      hostListings,
+      refreshHostListings,
+      refreshCatalog,
+      updateProfile,
+      signOut,
     }),
-    [favorites, toggleFavorite, bookings, addBooking, listings, addListing, account],
+    [
+      ready,
+      user,
+      account,
+      catalog,
+      catalogLoading,
+      propertyLookup,
+      favorites,
+      toggleFavorite,
+      bookings,
+      addBooking,
+      hostListings,
+      refreshHostListings,
+      refreshCatalog,
+      updateProfile,
+      signOut,
+    ],
   );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
@@ -214,6 +356,7 @@ export type Filters = {
   bathrooms: number;
   minRating: number;
   amenities: string[];
+  petFriendly: boolean;
 };
 
 export const defaultFilters: Filters = {
@@ -226,6 +369,7 @@ export const defaultFilters: Filters = {
   bathrooms: 0,
   minRating: 0,
   amenities: [],
+  petFriendly: false,
 };
 
 export const filterProperties = (list: Property[], f: Filters) =>
@@ -236,6 +380,7 @@ export const filterProperties = (list: Property[], f: Filters) =>
       const haystack = `${p.city} ${p.area} ${p.name}`.toLowerCase();
       if (!haystack.includes(q)) return false;
     }
+    if (f.petFriendly && !p.petFriendly) return false;
     if (p.guests < f.guests) return false;
     if (p.price < f.minPrice || p.price > f.maxPrice) return false;
     if (p.bedrooms < f.bedrooms) return false;

@@ -98,11 +98,14 @@ export type RatingBreakdown = {
   value: number;
 };
 
+export type ApprovalStatus = "pending" | "approved" | "rejected";
+
 export type Property = {
   id: string;
   name: string;
   city: string;
   area: string;
+  address: string;
   category: CategoryId;
   typeLabel: string;
   image: string;
@@ -120,15 +123,39 @@ export type Property = {
   houseRules: string[];
   badges: string[];
   host: {
+    id: string | null;
     name: string;
     initials: string;
     since: string;
     responseRate: number;
     verified: boolean;
+    phone: string;
   };
+  petFriendly: boolean;
+  petTypes: string[];
+  petRules: string | null;
+  petFee: number;
+  cancellationPolicy: string;
+  availabilityFrom: string | null;
+  approvalStatus: ApprovalStatus;
   ratingBreakdown: RatingBreakdown;
   reviews: Review[];
   bookedDays: number[];
+};
+
+type SeedProperty = Omit<
+  Property,
+  | "address"
+  | "host"
+  | "petFriendly"
+  | "petTypes"
+  | "petRules"
+  | "petFee"
+  | "cancellationPolicy"
+  | "availabilityFrom"
+  | "approvalStatus"
+> & {
+  host: { name: string; initials: string; since: string; responseRate: number; verified: boolean };
 };
 
 const rb = (v: Partial<RatingBreakdown> = {}): RatingBreakdown => ({
@@ -141,7 +168,8 @@ const rb = (v: Partial<RatingBreakdown> = {}): RatingBreakdown => ({
   ...v,
 });
 
-export const properties: Property[] = [
+const seedProperties: SeedProperty[] = [
+
   {
     id: "mountain-view-apartment",
     name: "Mountain View Apartment",
@@ -720,6 +748,37 @@ export const properties: Property[] = [
     bookedDays: [20, 21, 22, 23],
   },
 ];
+
+const petFriendlySeeds = new Set([
+  "brickhouse-kathmandu",
+  "nagarkot-sunrise-cabin",
+  "hetauda-rental-home",
+  "chitwan-tharu-homestay",
+  "nagarkot-pine-cottage",
+]);
+
+const seedPhone = (index: number) => `98${String(41000000 + index * 1111111).slice(0, 8)}`;
+
+export const properties: Property[] = seedProperties.map((p, i) => {
+  const pet = petFriendlySeeds.has(p.id);
+  return {
+    ...p,
+    address: `${p.area}, ${p.city}, Nepal`,
+    host: { ...p.host, id: null, phone: seedPhone(i) },
+    petFriendly: pet,
+    petTypes: pet ? ["Dogs", "Cats"] : [],
+    petRules: pet
+      ? "Pets stay on the ground floor. Please keep them off the beds and clean up in the garden."
+      : null,
+    petFee: pet ? 500 : 0,
+    cancellationPolicy:
+      "Free cancellation up to 5 days before check-in. 50% refund after that, no refund on the day of arrival.",
+    availabilityFrom: "2026-09-15",
+    approvalStatus: "approved" as const,
+  };
+});
+
+
 
 export const SERVICE_FEE_RATE = 0.08;
 

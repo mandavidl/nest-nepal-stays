@@ -224,7 +224,7 @@ function BookingList({ list, empty }: { list: Booking[]; empty: string }) {
         <Panel key={b.id}>
           <div className="flex flex-col gap-4 sm:flex-row">
             <img
-              src={b.image}
+              src={b.image ?? ""}
               alt={b.propertyName}
               loading="lazy"
               width={1280}

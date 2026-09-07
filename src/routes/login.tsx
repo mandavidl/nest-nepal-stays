@@ -1,8 +1,9 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Shell } from "@/components/nest/Shell";
-import { Panel, inputClass, primaryButtonClass } from "@/components/nest/Bits";
-import { useNest } from "@/lib/nest-store";
+import { Panel, ghostButtonClass, inputClass, primaryButtonClass } from "@/components/nest/Bits";
+import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable/index";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -20,21 +21,40 @@ export const Route = createFileRoute("/login")({
 });
 
 function LoginPage() {
-  const { signIn } = useNest();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
     if (!email.includes("@") || password.length < 6) {
       setError("Enter a valid email and a password of at least 6 characters.");
       return;
     }
-    const name = email.split("@")[0] ?? "Guest";
-    signIn(name.charAt(0).toUpperCase() + name.slice(1), email);
-    navigate({ to: "/account" });
+    setBusy(true);
+    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+    setBusy(false);
+    if (signInError) {
+      setError(signInError.message);
+      return;
+    }
+    void navigate({ to: "/account" });
+  };
+
+  const google = async () => {
+    setError("");
+    const result = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: window.location.origin,
+    });
+    if (result.error) {
+      setError("Google sign-in could not be completed. Please try again.");
+      return;
+    }
+    if (result.redirected) return;
+    void navigate({ to: "/account" });
   };
 
   return (
@@ -43,7 +63,7 @@ function LoginPage() {
         <Panel>
           <h1 className="font-display text-2xl font-semibold tracking-tight">Welcome back</h1>
           <p className="mt-1 text-[13px] text-stone2">
-            Log in to see your bookings and saved stays.
+            Log in to see your bookings, saved stays and host dashboard.
           </p>
           <form onSubmit={submit} className="mt-6 space-y-4">
             <label className="block">
@@ -67,10 +87,13 @@ function LoginPage() {
               />
             </label>
             {error && <p className="text-[13px] font-semibold text-brand-deep">{error}</p>}
-            <button type="submit" className={`${primaryButtonClass} w-full`}>
-              Log in
+            <button type="submit" disabled={busy} className={`${primaryButtonClass} w-full`}>
+              {busy ? "Logging in…" : "Log in"}
             </button>
           </form>
+          <button onClick={() => void google()} className={`${ghostButtonClass} mt-3 w-full`}>
+            Continue with Google
+          </button>
           <p className="mt-5 text-center text-[13px] text-stone2">
             New to NestNepal?{" "}
             <Link to="/signup" className="font-semibold text-brand-deep">
