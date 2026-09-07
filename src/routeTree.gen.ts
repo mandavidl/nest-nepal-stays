@@ -10,33 +10,154 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AboutRouteImport } from './routes/about'
+import { Route as AccountRouteImport } from './routes/account'
+import { Route as BecomeAHostRouteImport } from './routes/become-a-host'
+import { Route as ExploreRouteImport } from './routes/explore'
+import { Route as HostRouteImport } from './routes/host'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as SignupRouteImport } from './routes/signup'
+import { Route as BookPropertyIdRouteImport } from './routes/book.$propertyId'
+import { Route as PropertyPropertyIdRouteImport } from './routes/property.$propertyId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AboutRoute = AboutRouteImport.update({
+  id: '/about',
+  path: '/about',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountRoute = AccountRouteImport.update({
+  id: '/account',
+  path: '/account',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BecomeAHostRoute = BecomeAHostRouteImport.update({
+  id: '/become-a-host',
+  path: '/become-a-host',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExploreRoute = ExploreRouteImport.update({
+  id: '/explore',
+  path: '/explore',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HostRoute = HostRouteImport.update({
+  id: '/host',
+  path: '/host',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BookPropertyIdRoute = BookPropertyIdRouteImport.update({
+  id: '/book/$propertyId',
+  path: '/book/$propertyId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PropertyPropertyIdRoute = PropertyPropertyIdRouteImport.update({
+  id: '/property/$propertyId',
+  path: '/property/$propertyId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/account': typeof AccountRoute
+  '/become-a-host': typeof BecomeAHostRoute
+  '/explore': typeof ExploreRoute
+  '/host': typeof HostRoute
+  '/login': typeof LoginRoute
+  '/signup': typeof SignupRoute
+  '/book/$propertyId': typeof BookPropertyIdRoute
+  '/property/$propertyId': typeof PropertyPropertyIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/account': typeof AccountRoute
+  '/become-a-host': typeof BecomeAHostRoute
+  '/explore': typeof ExploreRoute
+  '/host': typeof HostRoute
+  '/login': typeof LoginRoute
+  '/signup': typeof SignupRoute
+  '/book/$propertyId': typeof BookPropertyIdRoute
+  '/property/$propertyId': typeof PropertyPropertyIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/account': typeof AccountRoute
+  '/become-a-host': typeof BecomeAHostRoute
+  '/explore': typeof ExploreRoute
+  '/host': typeof HostRoute
+  '/login': typeof LoginRoute
+  '/signup': typeof SignupRoute
+  '/book/$propertyId': typeof BookPropertyIdRoute
+  '/property/$propertyId': typeof PropertyPropertyIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/about'
+    | '/account'
+    | '/become-a-host'
+    | '/explore'
+    | '/host'
+    | '/login'
+    | '/signup'
+    | '/book/$propertyId'
+    | '/property/$propertyId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/about'
+    | '/account'
+    | '/become-a-host'
+    | '/explore'
+    | '/host'
+    | '/login'
+    | '/signup'
+    | '/book/$propertyId'
+    | '/property/$propertyId'
+  id:
+    | '__root__'
+    | '/'
+    | '/about'
+    | '/account'
+    | '/become-a-host'
+    | '/explore'
+    | '/host'
+    | '/login'
+    | '/signup'
+    | '/book/$propertyId'
+    | '/property/$propertyId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AboutRoute: typeof AboutRoute
+  AccountRoute: typeof AccountRoute
+  BecomeAHostRoute: typeof BecomeAHostRoute
+  ExploreRoute: typeof ExploreRoute
+  HostRoute: typeof HostRoute
+  LoginRoute: typeof LoginRoute
+  SignupRoute: typeof SignupRoute
+  BookPropertyIdRoute: typeof BookPropertyIdRoute
+  PropertyPropertyIdRoute: typeof PropertyPropertyIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +169,83 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account': {
+      id: '/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof AccountRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/become-a-host': {
+      id: '/become-a-host'
+      path: '/become-a-host'
+      fullPath: '/become-a-host'
+      preLoaderRoute: typeof BecomeAHostRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/explore': {
+      id: '/explore'
+      path: '/explore'
+      fullPath: '/explore'
+      preLoaderRoute: typeof ExploreRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/host': {
+      id: '/host'
+      path: '/host'
+      fullPath: '/host'
+      preLoaderRoute: typeof HostRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/book/$propertyId': {
+      id: '/book/$propertyId'
+      path: '/book/$propertyId'
+      fullPath: '/book/$propertyId'
+      preLoaderRoute: typeof BookPropertyIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/property/$propertyId': {
+      id: '/property/$propertyId'
+      path: '/property/$propertyId'
+      fullPath: '/property/$propertyId'
+      preLoaderRoute: typeof PropertyPropertyIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AboutRoute: AboutRoute,
+  AccountRoute: AccountRoute,
+  BecomeAHostRoute: BecomeAHostRoute,
+  ExploreRoute: ExploreRoute,
+  HostRoute: HostRoute,
+  LoginRoute: LoginRoute,
+  SignupRoute: SignupRoute,
+  BookPropertyIdRoute: BookPropertyIdRoute,
+  PropertyPropertyIdRoute: PropertyPropertyIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
