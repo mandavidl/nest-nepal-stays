@@ -18,6 +18,10 @@ import {
   type CategoryId,
 } from "@/lib/nest-data";
 import { useNest, type HostListing } from "@/lib/nest-store";
+import { PhotoUploader, type PhotoState } from "@/components/nest/PhotoUploader";
+import { MIN_PHOTOS } from "@/lib/nest-photos";
+import { formatNepalPhone, isValidNepalPhone, normalizeNepalPhone } from "@/lib/nest-validation";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/host")({
   head: () => ({
@@ -139,22 +143,47 @@ function Overview({ listingCount }: { listingCount: number }) {
   );
 }
 
-function MyProperties({ listings }: { listings: Listing[] }) {
+const approvalCopy: Record<string, string> = {
+  approved: "Approved — live for guests",
+  pending: "Pending review",
+  rejected: "Needs changes",
+};
+
+function MyProperties({ listings }: { listings: HostListing[] }) {
+  if (!listings.length) {
+    return (
+      <Panel>
+        <p className="text-[14px] text-stone2">
+          No properties yet. Use Add Property to publish your first stay.
+        </p>
+      </Panel>
+    );
+  }
   return (
     <div className="space-y-4">
-      {listings.map((l) => (
+      {listings.map(({ property: l, row }) => (
         <Panel key={l.id}>
-          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4">
+          <div className="grid gap-4 sm:grid-cols-[120px_minmax(0,1fr)_auto]">
+            <img
+              src={l.image}
+              alt={l.name}
+              loading="lazy"
+              className="h-24 w-full rounded-2xl object-cover sm:h-24 sm:w-[120px]"
+            />
             <div className="min-w-0">
               <p className="font-display text-lg font-semibold leading-tight">{l.name}</p>
               <p className="mt-0.5 text-[13px] text-stone2">
-                {categoryById(l.category).label} · {l.address}
+                {categoryById(l.category).label} · {l.area}, {l.city}
               </p>
               <p className="mt-2 text-[13px] text-stone2">
-                {l.bedrooms} bedrooms · {l.beds} beds · {l.bathrooms} bathrooms · {l.guests} guests
+                {l.bedrooms} bedrooms · {l.beds} beds · {l.bathrooms} bathrooms · {l.guests} guests ·{" "}
+                {l.gallery.length} photos
+              </p>
+              <p className="mt-1 text-[13px] text-stone2">
+                Contact: {formatNepalPhone(l.host.phone)}
               </p>
               <div className="mt-3 flex flex-wrap gap-1.5">
-                <VerifiedBadge label="Verified Property" />
+                {l.petFriendly && <VerifiedBadge label="Pet Friendly" />}
                 <VerifiedBadge label="Verified Photos" />
               </div>
             </div>
@@ -162,7 +191,10 @@ function MyProperties({ listings }: { listings: Listing[] }) {
               <p className="font-display text-base font-semibold">{formatNpr(l.price)}</p>
               <p className="text-[11px] text-stone2">/ night</p>
               <p className="mt-2 rounded-full bg-cream px-2.5 py-1 text-[11px] font-semibold text-brand-deep">
-                {l.status === "published" ? "Published" : "Draft"}
+                {approvalCopy[row.approval_status] ?? "Pending review"}
+              </p>
+              <p className="mt-1 text-[11px] text-stone2">
+                {row.status === "published" ? "Published" : "Draft"}
               </p>
             </div>
           </div>
@@ -178,6 +210,7 @@ const emptyForm = {
   address: "",
   city: "",
   description: "",
+  phone: "",
   price: 3000,
   guests: 2,
   bedrooms: 1,
@@ -185,15 +218,25 @@ const emptyForm = {
   bathrooms: 1,
   amenities: [] as string[],
   houseRules: "",
-  photoCount: 4,
   availableFrom: "",
+  petFriendly: false,
+  petTypes: [] as string[],
+  petRestrictions: "",
+  petFee: 0,
+  petRules: "",
 };
 
+const petTypeOptions = ["Dogs", "Cats", "Small pets", "Birds"];
+
 function AddProperty() {
-  const { addListing } = useNest();
+  const { user, account, refreshHostListings, refreshCatalog } = useNest();
   const [form, setForm] = useState(emptyForm);
+  const [photos, setPhotos] = useState<PhotoState[]>([]);
+  const [cover, setCover] = useState("");
   const [preview, setPreview] = useState(false);
   const [published, setPublished] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
 
   const set = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
@@ -206,20 +249,97 @@ function AddProperty() {
         : [...f.amenities, a],
     }));
 
-  const publish = () => {
-    addListing({ ...form, status: "published" });
+  const togglePetType = (t: string) =>
+    setForm((f) => ({
+      ...f,
+      petTypes: f.petTypes.includes(t) ? f.petTypes.filter((x) => x !== t) : [...f.petTypes, t],
+    }));
+
+  if (!user) {
+    return (
+      <Panel>
+        <h2 className="font-display text-xl font-semibold">Log in to add a property</h2>
+        <p className="mt-2 text-[14px] text-stone2">
+          Your listings, photos and contact number are saved to your account.
+        </p>
+        <Link to="/login" className={`${primaryButtonClass} mt-4`}>
+          Log in
+        </Link>
+      </Panel>
+    );
+  }
+
+  const validate = () => {
+    if (!isValidNepalPhone(form.phone))
+      return "Add a valid Nepal mobile number, for example 9812345678.";
+    if (photos.length < MIN_PHOTOS) return `Upload at least ${MIN_PHOTOS} photos of the property.`;
+    if (!cover) return "Choose which photo is the cover photo.";
+    if (form.petFriendly && !form.petTypes.length)
+      return "Select which pets are welcome, or turn pet friendly off.";
+    return "";
+  };
+
+  const publish = async () => {
+    const problem = validate();
+    if (problem) {
+      setError(problem);
+      setPreview(false);
+      return;
+    }
+    setBusy(true);
+    setError("");
+    const orderedPaths = [cover, ...photos.map((p) => p.path).filter((p) => p !== cover)];
+    const { error: insertError } = await supabase.from("properties").insert({
+      host_id: user.id,
+      name: form.name,
+      category: form.category,
+      address: form.address,
+      city: form.city,
+      area: form.address,
+      description: form.description,
+      phone_number: normalizeNepalPhone(form.phone),
+      price: form.price,
+      guests: form.guests,
+      bedrooms: form.bedrooms,
+      beds: form.beds,
+      bathrooms: form.bathrooms,
+      amenities: form.amenities,
+      house_rules: form.houseRules
+        .split("\n")
+        .map((r) => r.trim())
+        .filter(Boolean),
+      photos: orderedPaths,
+      cover_photo: cover,
+      available_from: form.availableFrom || null,
+      pet_friendly: form.petFriendly,
+      pet_types: form.petFriendly ? form.petTypes : [],
+      pet_restrictions: form.petFriendly ? form.petRestrictions : null,
+      pet_fee: form.petFriendly ? form.petFee : null,
+      pet_rules: form.petFriendly ? form.petRules : null,
+      host_name: account.name,
+      status: "published",
+    });
+    setBusy(false);
+    if (insertError) {
+      setError(insertError.message);
+      setPreview(false);
+      return;
+    }
+    await Promise.all([refreshHostListings(), refreshCatalog()]);
     setPublished(form.name);
     setForm(emptyForm);
+    setPhotos([]);
+    setCover("");
     setPreview(false);
   };
 
   if (published) {
     return (
       <Panel>
-        <h2 className="font-display text-xl font-semibold">{published} is live</h2>
+        <h2 className="font-display text-xl font-semibold">{published} has been submitted</h2>
         <p className="mt-2 text-[14px] text-stone2">
-          Your listing is published and now appears under My Properties. Verification badges are
-          added once our team checks the photos.
+          Your listing is saved with its photos, contact number and pet policy, and appears under My
+          Properties with its approval status.
         </p>
         <button onClick={() => setPublished("")} className={`${primaryButtonClass} mt-4`}>
           Add another property
@@ -229,12 +349,20 @@ function AddProperty() {
   }
 
   if (preview) {
+    const coverUrl = photos.find((p) => p.path === cover)?.url ?? photos[0]?.url ?? "";
     return (
       <Panel>
         <p className="text-xs font-bold uppercase tracking-wider text-brand-deep">
           Listing preview
         </p>
-        <h2 className="mt-2 font-display text-2xl font-semibold leading-tight">
+        {coverUrl && (
+          <img
+            src={coverUrl}
+            alt={form.name || "Property cover photo"}
+            className="mt-3 aspect-[16/9] w-full rounded-2xl object-cover"
+          />
+        )}
+        <h2 className="mt-3 font-display text-2xl font-semibold leading-tight">
           {form.name || "Untitled property"}
         </h2>
         <p className="mt-1 text-[13px] text-stone2">
@@ -249,8 +377,15 @@ function AddProperty() {
         </p>
         <p className="mt-3 text-[13px] text-stone2">
           {form.bedrooms} bedrooms · {form.beds} beds · {form.bathrooms} bathrooms · up to{" "}
-          {form.guests} guests · {form.photoCount} photos
+          {form.guests} guests · {photos.length} photos
         </p>
+        <p className="mt-1 text-[13px] text-stone2">Contact: {formatNepalPhone(form.phone)}</p>
+        {form.petFriendly && (
+          <p className="mt-1 text-[13px] text-stone2">
+            Pet friendly · {form.petTypes.join(", ")}
+            {form.petFee ? ` · pet fee ${formatNpr(form.petFee)}` : ""}
+          </p>
+        )}
         {form.amenities.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-1.5">
             {form.amenities.map((a) => (
@@ -266,9 +401,14 @@ function AddProperty() {
         <p className="mt-3 text-[13px] text-stone2">
           Available from {formatDate(form.availableFrom)}
         </p>
+        {error && <p className="mt-3 text-[13px] font-semibold text-brand-deep">{error}</p>}
         <div className="mt-5 flex flex-wrap gap-2">
-          <button onClick={publish} className={primaryButtonClass}>
-            Publish listing
+          <button
+            onClick={() => void publish()}
+            disabled={busy}
+            className={`${primaryButtonClass} disabled:opacity-50`}
+          >
+            {busy ? "Publishing…" : "Publish listing"}
           </button>
           <button onClick={() => setPreview(false)} className={ghostButtonClass}>
             Keep editing
@@ -288,6 +428,12 @@ function AddProperty() {
       <form
         onSubmit={(e) => {
           e.preventDefault();
+          const problem = validate();
+          if (problem) {
+            setError(problem);
+            return;
+          }
+          setError("");
           setPreview(true);
         }}
         className="mt-5 space-y-4"
@@ -347,6 +493,23 @@ function AddProperty() {
         </div>
 
         <label className="block">
+          <span className="field-label">
+            Contact phone number <span className="text-brand">*</span>
+          </span>
+          <input
+            required
+            value={form.phone}
+            onChange={(e) => set("phone", e.target.value)}
+            placeholder="9812345678"
+            className={`${inputClass} mt-1.5`}
+          />
+          <span className="mt-1.5 block text-[12px] text-stone2">
+            Nepal mobile number (10 digits starting 98, 97 or 96). Guests see this on your listing
+            and after booking.
+          </span>
+        </label>
+
+        <label className="block">
           <span className="field-label">Description</span>
           <textarea
             required
@@ -358,6 +521,14 @@ function AddProperty() {
           />
         </label>
 
+        <PhotoUploader
+          userId={user.id}
+          photos={photos}
+          cover={cover}
+          onChange={setPhotos}
+          onCoverChange={setCover}
+        />
+
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {(
             [
@@ -366,7 +537,6 @@ function AddProperty() {
               ["Bedrooms", "bedrooms", 0, 10],
               ["Beds", "beds", 1, 16],
               ["Bathrooms", "bathrooms", 1, 10],
-              ["Photos uploaded", "photoCount", 1, 30],
             ] as const
           ).map(([label, key, min, max]) => (
             <label key={key} className="block">
@@ -381,6 +551,71 @@ function AddProperty() {
               />
             </label>
           ))}
+        </div>
+
+        <div className="rounded-2xl border border-sand bg-cream p-4">
+          <label className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              checked={form.petFriendly}
+              onChange={(e) => set("petFriendly", e.target.checked)}
+              className="size-4 accent-brand"
+            />
+            <span className="text-sm font-semibold">This property is pet friendly</span>
+          </label>
+          {form.petFriendly && (
+            <div className="mt-4 space-y-4">
+              <div>
+                <span className="field-label">Pets welcome</span>
+                <div className="mt-1.5 flex flex-wrap gap-2">
+                  {petTypeOptions.map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => togglePetType(t)}
+                      className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                        form.petTypes.includes(t)
+                          ? "border-brand bg-surface text-brand-deep"
+                          : "border-sand bg-surface text-stone2 hover:border-brand/40"
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <label className="block">
+                <span className="field-label">Size or breed restrictions (optional)</span>
+                <input
+                  value={form.petRestrictions}
+                  onChange={(e) => set("petRestrictions", e.target.value)}
+                  placeholder="Up to 2 pets, under 15 kg"
+                  className={`${inputClass} mt-1.5`}
+                />
+              </label>
+              <label className="block">
+                <span className="field-label">Pet fee per stay in NPR (optional)</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={20000}
+                  value={form.petFee}
+                  onChange={(e) => set("petFee", Number(e.target.value))}
+                  className={`${inputClass} mt-1.5`}
+                />
+              </label>
+              <label className="block">
+                <span className="field-label">Pet rules (optional)</span>
+                <textarea
+                  rows={2}
+                  value={form.petRules}
+                  onChange={(e) => set("petRules", e.target.value)}
+                  placeholder="Pets not allowed on beds. Please clean the garden area."
+                  className={`${inputClass} mt-1.5`}
+                />
+              </label>
+            </div>
+          )}
         </div>
 
         <div>
@@ -424,6 +659,8 @@ function AddProperty() {
             className={`${inputClass} mt-1.5`}
           />
         </label>
+
+        {error && <p className="text-[13px] font-semibold text-brand-deep">{error}</p>}
 
         <button type="submit" className={`${primaryButtonClass} w-full`}>
           Preview listing
