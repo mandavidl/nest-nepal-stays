@@ -27,15 +27,15 @@ const categoryIds = categories.map((c) => c.id);
 
 export const Route = createFileRoute("/explore")({
   validateSearch: (search: Record<string, unknown>): ExploreSearch => {
-    const category = String(search.category ?? "all");
+    const category = String(search["category"] ?? "all");
+    const str = (key: string) => (typeof search[key] === "string" ? (search[key] as string) : "");
+    const guests = Number(search["guests"]);
     return {
-      location: typeof search.location === "string" ? search.location : "",
-      checkIn: typeof search.checkIn === "string" ? search.checkIn : "",
-      checkOut: typeof search.checkOut === "string" ? search.checkOut : "",
-      guests: Number(search.guests) > 0 ? Number(search.guests) : 1,
-      category: (categoryIds as string[]).includes(category)
-        ? (category as CategoryId)
-        : "all",
+      location: str("location"),
+      checkIn: str("checkIn"),
+      checkOut: str("checkOut"),
+      guests: guests > 0 ? guests : 1,
+      category: (categoryIds as string[]).includes(category) ? (category as CategoryId) : "all",
     };
   },
   head: () => ({
