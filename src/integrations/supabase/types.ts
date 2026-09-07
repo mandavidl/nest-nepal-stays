@@ -14,7 +14,249 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      bookings: {
+        Row: {
+          check_in: string
+          check_out: string
+          city: string
+          created_at: string
+          guest_id: string
+          guests: number
+          host_name: string
+          host_phone: string | null
+          id: string
+          image: string | null
+          nights: number
+          property_id: string
+          property_name: string
+          reference: string
+          reviewed: boolean
+          status: string
+          total: number
+          type_label: string
+        }
+        Insert: {
+          check_in: string
+          check_out: string
+          city?: string
+          created_at?: string
+          guest_id: string
+          guests?: number
+          host_name?: string
+          host_phone?: string | null
+          id?: string
+          image?: string | null
+          nights: number
+          property_id: string
+          property_name?: string
+          reference?: string
+          reviewed?: boolean
+          status?: string
+          total: number
+          type_label?: string
+        }
+        Update: {
+          check_in?: string
+          check_out?: string
+          city?: string
+          created_at?: string
+          guest_id?: string
+          guests?: number
+          host_name?: string
+          host_phone?: string | null
+          id?: string
+          image?: string | null
+          nights?: number
+          property_id?: string
+          property_name?: string
+          reference?: string
+          reviewed?: boolean
+          status?: string
+          total?: number
+          type_label?: string
+        }
+        Relationships: []
+      }
+      favorites: {
+        Row: {
+          created_at: string
+          property_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          property_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          property_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          full_name: string
+          id: string
+          is_host: boolean
+          phone_number: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          full_name?: string
+          id: string
+          is_host?: boolean
+          phone_number?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          full_name?: string
+          id?: string
+          is_host?: boolean
+          phone_number?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      properties: {
+        Row: {
+          address: string
+          amenities: string[]
+          approval_status: string
+          area: string
+          availability_from: string | null
+          badges: string[]
+          bathrooms: number
+          bedrooms: number
+          beds: number
+          booked_days: number[]
+          cancellation_policy: string
+          city: string
+          cleaning_fee: number
+          cover_photo: string | null
+          created_at: string
+          description: string
+          host_id: string
+          host_initials: string
+          host_name: string
+          host_response_rate: number
+          host_since: string
+          host_verified: boolean
+          house_rules: string[]
+          id: string
+          max_guests: number
+          pet_fee: number
+          pet_friendly: boolean
+          pet_rules: string | null
+          pet_types: string[]
+          phone_number: string
+          photos: string[]
+          price_per_night: number
+          property_category: string
+          property_name: string
+          rating: number
+          rating_breakdown: Json
+          review_count: number
+          reviews: Json
+          status: string
+          type_label: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string
+          amenities?: string[]
+          approval_status?: string
+          area?: string
+          availability_from?: string | null
+          badges?: string[]
+          bathrooms?: number
+          bedrooms?: number
+          beds?: number
+          booked_days?: number[]
+          cancellation_policy?: string
+          city?: string
+          cleaning_fee?: number
+          cover_photo?: string | null
+          created_at?: string
+          description?: string
+          host_id: string
+          host_initials?: string
+          host_name?: string
+          host_response_rate?: number
+          host_since?: string
+          host_verified?: boolean
+          house_rules?: string[]
+          id?: string
+          max_guests?: number
+          pet_fee?: number
+          pet_friendly?: boolean
+          pet_rules?: string | null
+          pet_types?: string[]
+          phone_number: string
+          photos?: string[]
+          price_per_night?: number
+          property_category: string
+          property_name: string
+          rating?: number
+          rating_breakdown?: Json
+          review_count?: number
+          reviews?: Json
+          status?: string
+          type_label?: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string
+          amenities?: string[]
+          approval_status?: string
+          area?: string
+          availability_from?: string | null
+          badges?: string[]
+          bathrooms?: number
+          bedrooms?: number
+          beds?: number
+          booked_days?: number[]
+          cancellation_policy?: string
+          city?: string
+          cleaning_fee?: number
+          cover_photo?: string | null
+          created_at?: string
+          description?: string
+          host_id?: string
+          host_initials?: string
+          host_name?: string
+          host_response_rate?: number
+          host_since?: string
+          host_verified?: boolean
+          house_rules?: string[]
+          id?: string
+          max_guests?: number
+          pet_fee?: number
+          pet_friendly?: boolean
+          pet_rules?: string | null
+          pet_types?: string[]
+          phone_number?: string
+          photos?: string[]
+          price_per_night?: number
+          property_category?: string
+          property_name?: string
+          rating?: number
+          rating_breakdown?: Json
+          review_count?: number
+          reviews?: Json
+          status?: string
+          type_label?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
