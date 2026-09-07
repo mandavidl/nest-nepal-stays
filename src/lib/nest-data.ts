@@ -54,8 +54,10 @@ export const categories: Category[] = [
   },
 ];
 
-export const categoryById = (id: CategoryId) =>
-  categories.find((c) => c.id === id) ?? categories[0];
+export const categoryById = (id: CategoryId): Category =>
+  categories.find((c) => c.id === id) ??
+  ({ id: "homes", emoji: "🏠", label: "Homes & Apartments", short: "Homes", blurb: "" } as Category);
+
 
 export const amenityList = [
   "Wi-Fi",

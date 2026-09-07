@@ -13,9 +13,14 @@ export function Footer() {
           </p>
         </div>
         <div className="flex flex-wrap gap-4 text-[13px] font-semibold text-stone2">
-          <Link to="/explore" className="hover:text-ink">
+          <Link
+            to="/explore"
+            search={{ location: "", checkIn: "", checkOut: "", guests: 1, category: "all" }}
+            className="hover:text-ink"
+          >
             Explore
           </Link>
+
           <Link to="/become-a-host" className="hover:text-ink">
             Become a Host
           </Link>
