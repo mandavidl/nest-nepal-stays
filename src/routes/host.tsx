@@ -289,17 +289,19 @@ function AddProperty() {
     setBusy(true);
     setError("");
     const orderedPaths = [cover, ...photos.map((p) => p.path).filter((p) => p !== cover)];
+    const petRules = [form.petRestrictions, form.petRules].filter(Boolean).join(" · ");
     const { error: insertError } = await supabase.from("properties").insert({
       host_id: user.id,
-      name: form.name,
-      category: form.category,
+      property_name: form.name,
+      property_category: form.category,
+      type_label: categoryById(form.category).label,
       address: form.address,
       city: form.city,
       area: form.address,
       description: form.description,
       phone_number: normalizeNepalPhone(form.phone),
-      price: form.price,
-      guests: form.guests,
+      price_per_night: form.price,
+      max_guests: form.guests,
       bedrooms: form.bedrooms,
       beds: form.beds,
       bathrooms: form.bathrooms,
@@ -310,12 +312,11 @@ function AddProperty() {
         .filter(Boolean),
       photos: orderedPaths,
       cover_photo: cover,
-      available_from: form.availableFrom || null,
+      availability_from: form.availableFrom || null,
       pet_friendly: form.petFriendly,
       pet_types: form.petFriendly ? form.petTypes : [],
-      pet_restrictions: form.petFriendly ? form.petRestrictions : null,
       pet_fee: form.petFriendly ? form.petFee : 0,
-      pet_rules: form.petFriendly ? form.petRules : null,
+      pet_rules: form.petFriendly && petRules ? petRules : null,
       host_name: account.name,
       status: "published",
     });
