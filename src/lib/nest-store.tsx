@@ -107,7 +107,7 @@ const seedBookings = (): Booking[] => {
 };
 
 const seedListings = (): Listing[] =>
-  [seedProperties[0], seedProperties[6]].map((p) => ({
+  [pick("mountain-view-apartment"), pick("nagarkot-sunrise-cabin")].map((p) => ({
     id: p.id,
     name: p.name,
     category: p.category,
