@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { useNest } from "@/lib/nest-store";
+import logoAsset from "@/assets/nestnepal-logo.jpg.asset.json";
 
 const links = [
   { to: "/", label: "Home" },
