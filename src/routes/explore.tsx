@@ -13,7 +13,7 @@ import {
   properties,
   type CategoryId,
 } from "@/lib/nest-data";
-import { defaultFilters, filterProperties, type Filters } from "@/lib/nest-store";
+import { defaultFilters, filterProperties, useNest, type Filters } from "@/lib/nest-store";
 
 type ExploreSearch = {
   location: string;
