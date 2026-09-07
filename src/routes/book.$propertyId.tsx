@@ -83,7 +83,7 @@ function BookingFlow() {
         nights,
         total: q.total,
         hostName: property.host.name,
-        hostPhone: property.phone ?? null,
+        hostPhone: property.host.phone ?? null,
       });
       setConfirmed(booking);
     } catch (e) {

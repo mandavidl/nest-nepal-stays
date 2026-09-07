@@ -17,7 +17,7 @@ import {
   properties,
   type CategoryId,
 } from "@/lib/nest-data";
-import { useNest, type Listing } from "@/lib/nest-store";
+import { useNest, type HostListing } from "@/lib/nest-store";
 
 export const Route = createFileRoute("/host")({
   head: () => ({
@@ -54,7 +54,7 @@ type Section = (typeof sections)[number];
 
 function HostDashboard() {
   const [section, setSection] = useState<Section>("Overview");
-  const { listings, bookings, account } = useNest();
+  const { hostListings: listings, bookings, account } = useNest();
 
   return (
     <Shell>
