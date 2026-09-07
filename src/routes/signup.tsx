@@ -1,8 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Shell } from "@/components/nest/Shell";
-import { Panel, inputClass, primaryButtonClass } from "@/components/nest/Bits";
-import { useNest } from "@/lib/nest-store";
+import { Panel, ghostButtonClass, inputClass, primaryButtonClass } from "@/components/nest/Bits";
+import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable/index";
+import { isValidNepalPhone, normalizeNepalPhone } from "@/lib/nest-validation";
 
 export const Route = createFileRoute("/signup")({
   head: () => ({
@@ -24,22 +26,64 @@ export const Route = createFileRoute("/signup")({
 });
 
 function SignupPage() {
-  const { signIn } = useNest();
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [intent, setIntent] = useState<"guest" | "host">("guest");
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
+    setNotice("");
     if (name.trim().length < 2 || !email.includes("@") || password.length < 6) {
       setError("Add your name, a valid email and a password of at least 6 characters.");
       return;
     }
-    signIn(name.trim(), email);
-    navigate({ to: intent === "host" ? "/host" : "/account" });
+    if (intent === "host" && !isValidNepalPhone(phone)) {
+      setError("Hosts need a valid Nepal mobile number, for example 9812345678.");
+      return;
+    }
+    setBusy(true);
+    const { data, error: signUpError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: window.location.origin,
+        data: {
+          full_name: name.trim(),
+          phone_number: phone ? normalizeNepalPhone(phone) : "",
+          is_host: intent === "host",
+        },
+      },
+    });
+    setBusy(false);
+    if (signUpError) {
+      setError(signUpError.message);
+      return;
+    }
+    if (!data.session) {
+      setNotice("Almost there — check your email and confirm your address to finish signing up.");
+      return;
+    }
+    void navigate({ to: intent === "host" ? "/host" : "/account" });
+  };
+
+  const google = async () => {
+    setError("");
+    const result = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: window.location.origin,
+    });
+    if (result.error) {
+      setError("Google sign-in could not be completed. Please try again.");
+      return;
+    }
+    if (result.redirected) return;
+    void navigate({ to: intent === "host" ? "/host" : "/account" });
   };
 
   return (
@@ -67,6 +111,17 @@ function SignupPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
+                className={`${inputClass} mt-1.5`}
+              />
+            </label>
+            <label className="block">
+              <span className="field-label">
+                Phone number {intent === "host" && <span className="text-brand">*</span>}
+              </span>
+              <input
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="9812345678"
                 className={`${inputClass} mt-1.5`}
               />
             </label>
@@ -105,10 +160,14 @@ function SignupPage() {
               </div>
             </div>
             {error && <p className="text-[13px] font-semibold text-brand-deep">{error}</p>}
-            <button type="submit" className={`${primaryButtonClass} w-full`}>
-              Create account
+            {notice && <p className="text-[13px] font-semibold text-brand-deep">{notice}</p>}
+            <button type="submit" disabled={busy} className={`${primaryButtonClass} w-full`}>
+              {busy ? "Creating account…" : "Create account"}
             </button>
           </form>
+          <button onClick={() => void google()} className={`${ghostButtonClass} mt-3 w-full`}>
+            Continue with Google
+          </button>
           <p className="mt-5 text-center text-[13px] text-stone2">
             Already have an account?{" "}
             <Link to="/login" className="font-semibold text-brand-deep">
