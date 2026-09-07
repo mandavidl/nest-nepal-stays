@@ -18,13 +18,18 @@ export function Header() {
     <header className="sticky top-0 z-40 border-b border-sand/80 bg-cream/90 backdrop-blur-md">
       <div className="mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-5 py-3.5">
         <Link to="/" className="flex min-w-0 items-center gap-2">
-          <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-brand text-cream shadow-sm">
-            <span className="font-display text-lg font-semibold leading-none">N</span>
-          </span>
+          <img
+            src={logoAsset.url}
+            alt="NestNepal logo"
+            width={40}
+            height={40}
+            className="size-10 shrink-0 rounded-xl object-cover"
+          />
           <span className="truncate font-display text-lg font-semibold tracking-tight">
             NestNepal
           </span>
         </Link>
+
 
         <nav className="hidden items-center gap-1 lg:flex">
           {links.map((l) => (
