@@ -74,7 +74,8 @@ function Explore() {
   const [showMap, setShowMap] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
 
-  const results = useMemo(() => filterProperties(properties, filters), [filters]);
+  const { catalog } = useNest();
+  const results = useMemo(() => filterProperties(catalog, filters), [catalog, filters]);
   const activeCategory = filters.category;
   const categoryLabel =
     activeCategory === "all"
@@ -212,6 +213,21 @@ function Explore() {
                   </button>
                 ))}
               </div>
+            </div>
+
+            <div className="mt-5">
+              <p className="field-label">Pets</p>
+              <button
+                onClick={() => setFilters((f) => ({ ...f, petFriendly: !f.petFriendly }))}
+                aria-pressed={filters.petFriendly}
+                className={`mt-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                  filters.petFriendly
+                    ? "border-brand bg-cream text-brand-deep"
+                    : "border-sand bg-surface text-stone2 hover:border-brand/40"
+                }`}
+              >
+                🐾 Pet friendly only
+              </button>
             </div>
 
             <div className="mt-5">
