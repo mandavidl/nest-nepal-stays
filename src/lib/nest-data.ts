@@ -98,11 +98,14 @@ export type RatingBreakdown = {
   value: number;
 };
 
+export type ApprovalStatus = "pending" | "approved" | "rejected";
+
 export type Property = {
   id: string;
   name: string;
   city: string;
   area: string;
+  address: string;
   category: CategoryId;
   typeLabel: string;
   image: string;
@@ -120,15 +123,39 @@ export type Property = {
   houseRules: string[];
   badges: string[];
   host: {
+    id: string | null;
     name: string;
     initials: string;
     since: string;
     responseRate: number;
     verified: boolean;
+    phone: string;
   };
+  petFriendly: boolean;
+  petTypes: string[];
+  petRules: string | null;
+  petFee: number;
+  cancellationPolicy: string;
+  availabilityFrom: string | null;
+  approvalStatus: ApprovalStatus;
   ratingBreakdown: RatingBreakdown;
   reviews: Review[];
   bookedDays: number[];
+};
+
+type SeedProperty = Omit<
+  Property,
+  | "address"
+  | "host"
+  | "petFriendly"
+  | "petTypes"
+  | "petRules"
+  | "petFee"
+  | "cancellationPolicy"
+  | "availabilityFrom"
+  | "approvalStatus"
+> & {
+  host: { name: string; initials: string; since: string; responseRate: number; verified: boolean };
 };
 
 const rb = (v: Partial<RatingBreakdown> = {}): RatingBreakdown => ({
@@ -141,7 +168,8 @@ const rb = (v: Partial<RatingBreakdown> = {}): RatingBreakdown => ({
   ...v,
 });
 
-export const properties: Property[] = [
+const seedProperties: SeedProperty[] = [
+
   {
     id: "mountain-view-apartment",
     name: "Mountain View Apartment",
