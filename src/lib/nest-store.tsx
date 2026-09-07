@@ -61,9 +61,15 @@ const StoreContext = createContext<Store | null>(null);
 
 const KEY = "nestnepal-state-v1";
 
+const pick = (id: string): Property => {
+  const found = seedProperties.find((p) => p.id === id);
+  if (!found) throw new Error(`Unknown property: ${id}`);
+  return found;
+};
+
 const seedBookings = (): Booking[] => {
-  const upcoming = seedProperties[5];
-  const past = seedProperties[0];
+  const upcoming = pick("bandipur-heritage-homestay");
+  const past = pick("mountain-view-apartment");
   return [
     {
       id: "NN-4821",
