@@ -749,6 +749,37 @@ const seedProperties: SeedProperty[] = [
   },
 ];
 
+const petFriendlySeeds = new Set([
+  "brickhouse-kathmandu",
+  "nagarkot-sunrise-cabin",
+  "hetauda-rental-home",
+  "chitwan-tharu-homestay",
+  "nagarkot-pine-cottage",
+]);
+
+const seedPhone = (index: number) => `98${String(41000000 + index * 1111111).slice(0, 8)}`;
+
+export const properties: Property[] = seedProperties.map((p, i) => {
+  const pet = petFriendlySeeds.has(p.id);
+  return {
+    ...p,
+    address: `${p.area}, ${p.city}, Nepal`,
+    host: { ...p.host, id: null, phone: seedPhone(i) },
+    petFriendly: pet,
+    petTypes: pet ? ["Dogs", "Cats"] : [],
+    petRules: pet
+      ? "Pets stay on the ground floor. Please keep them off the beds and clean up in the garden."
+      : null,
+    petFee: pet ? 500 : 0,
+    cancellationPolicy:
+      "Free cancellation up to 5 days before check-in. 50% refund after that, no refund on the day of arrival.",
+    availabilityFrom: "2026-09-15",
+    approvalStatus: "approved" as const,
+  };
+});
+
+
+
 export const SERVICE_FEE_RATE = 0.08;
 
 export const formatNpr = (value: number) => `Rs. ${Math.round(value).toLocaleString("en-IN")}`;
