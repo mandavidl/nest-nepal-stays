@@ -67,21 +67,28 @@ function BookingFlow() {
   const q = quote(property, nights);
   const canContinue = step === 0 ? nights > 0 : true;
 
-  const confirm = () => {
-    const booking = addBooking({
-      propertyId: property.id,
-      propertyName: property.name,
-      city: property.city,
-      typeLabel: property.typeLabel,
-      image: property.image,
-      checkIn,
-      checkOut,
-      guests,
-      nights,
-      total: q.total,
-      hostName: property.host.name,
-    });
-    setConfirmed(booking);
+  const [bookingError, setBookingError] = useState("");
+
+  const confirm = async () => {
+    try {
+      const booking = await addBooking({
+        propertyId: property.id,
+        propertyName: property.name,
+        city: property.city,
+        typeLabel: property.typeLabel,
+        image: property.image,
+        checkIn,
+        checkOut,
+        guests,
+        nights,
+        total: q.total,
+        hostName: property.host.name,
+        hostPhone: property.phone ?? null,
+      });
+      setConfirmed(booking);
+    } catch (e) {
+      setBookingError(e instanceof Error ? e.message : "Booking could not be saved.");
+    }
   };
 
   if (confirmed) {
