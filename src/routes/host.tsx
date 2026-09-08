@@ -174,9 +174,12 @@ function Overview({ listingCount }: { listingCount: number }) {
 }
 
 const approvalCopy: Record<string, string> = {
-  approved: "Approved — live for guests",
-  pending: "Pending review",
-  rejected: "Needs changes",
+  draft: "Draft",
+  pending_approval: "Waiting for approval",
+  published: "Published — live for guests",
+  rejected: "Not approved — needs changes",
+  suspended: "Suspended by NestNepal",
+  removed: "Removed",
 };
 
 function MyProperties({ listings }: { listings: HostListing[] }) {
@@ -221,11 +224,11 @@ function MyProperties({ listings }: { listings: HostListing[] }) {
               <p className="font-display text-base font-semibold">{formatNpr(l.price)}</p>
               <p className="text-[11px] text-stone2">/ night</p>
               <p className="mt-2 rounded-full bg-cream px-2.5 py-1 text-[11px] font-semibold text-brand-deep">
-                {approvalCopy[row.approval_status] ?? "Pending review"}
+                {approvalCopy[row.property_status] ?? "Waiting for approval"}
               </p>
-              <p className="mt-1 text-[11px] text-stone2">
-                {row.status === "published" ? "Published" : "Draft"}
-              </p>
+              {row.decision_note && (
+                <p className="mt-1 text-[11px] text-stone2">{row.decision_note}</p>
+              )}
             </div>
           </div>
         </Panel>
