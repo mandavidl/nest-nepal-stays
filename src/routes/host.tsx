@@ -58,7 +58,18 @@ type Section = (typeof sections)[number];
 
 function HostDashboard() {
   const [section, setSection] = useState<Section>("Overview");
-  const { hostListings: listings, bookings, account } = useNest();
+  const { hostListings: listings, hostBookings, account, permissions, ready } = useNest();
+  const bookings = hostBookings;
+
+  if (ready && permissions.hostStatus !== "approved") {
+    return (
+      <Shell>
+        <section className="mx-auto max-w-2xl px-5 py-12">
+          <HostVerification />
+        </section>
+      </Shell>
+    );
+  }
 
   return (
     <Shell>
