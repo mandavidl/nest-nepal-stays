@@ -19,7 +19,10 @@ export type Database = {
           check_in: string
           check_out: string
           city: string
+          converted_amount: number
           created_at: string
+          exchange_rate_used: number
+          guest_currency: string
           guest_id: string
           guests: number
           host_name: string
@@ -27,8 +30,11 @@ export type Database = {
           id: string
           image: string | null
           nights: number
+          original_currency: string
+          original_property_price: number
           property_id: string
           property_name: string
+          rate_timestamp: string | null
           reference: string
           reviewed: boolean
           status: string
@@ -39,7 +45,10 @@ export type Database = {
           check_in: string
           check_out: string
           city?: string
+          converted_amount?: number
           created_at?: string
+          exchange_rate_used?: number
+          guest_currency?: string
           guest_id: string
           guests?: number
           host_name?: string
@@ -47,8 +56,11 @@ export type Database = {
           id?: string
           image?: string | null
           nights: number
+          original_currency?: string
+          original_property_price?: number
           property_id: string
           property_name?: string
+          rate_timestamp?: string | null
           reference?: string
           reviewed?: boolean
           status?: string
@@ -59,7 +71,10 @@ export type Database = {
           check_in?: string
           check_out?: string
           city?: string
+          converted_amount?: number
           created_at?: string
+          exchange_rate_used?: number
+          guest_currency?: string
           guest_id?: string
           guests?: number
           host_name?: string
@@ -67,13 +82,34 @@ export type Database = {
           id?: string
           image?: string | null
           nights?: number
+          original_currency?: string
+          original_property_price?: number
           property_id?: string
           property_name?: string
+          rate_timestamp?: string | null
           reference?: string
           reviewed?: boolean
           status?: string
           total?: number
           type_label?: string
+        }
+        Relationships: []
+      }
+      exchange_rates: {
+        Row: {
+          base: string
+          fetched_at: string
+          rates: Json
+        }
+        Insert: {
+          base: string
+          fetched_at?: string
+          rates?: Json
+        }
+        Update: {
+          base?: string
+          fetched_at?: string
+          rates?: Json
         }
         Relationships: []
       }
@@ -95,29 +131,119 @@ export type Database = {
         }
         Relationships: []
       }
-      profiles: {
+      host_applications: {
         Row: {
           created_at: string
+          decision_note: string | null
+          email: string
+          full_name: string
+          id: string
+          message: string
+          phone_number: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          decision_note?: string | null
+          email?: string
+          full_name?: string
+          id?: string
+          message?: string
+          phone_number?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          decision_note?: string | null
+          email?: string
+          full_name?: string
+          id?: string
+          message?: string
+          phone_number?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      moderation_actions: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          id: string
+          new_value: string | null
+          notes: string | null
+          previous_value: string | null
+          target_property_id: string | null
+          target_user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          id?: string
+          new_value?: string | null
+          notes?: string | null
+          previous_value?: string | null
+          target_property_id?: string | null
+          target_user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          id?: string
+          new_value?: string | null
+          notes?: string | null
+          previous_value?: string | null
+          target_property_id?: string | null
+          target_user_id?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          currency: string
           email: string | null
           full_name: string
+          host_status: string
           id: string
           is_host: boolean
           phone_number: string | null
           updated_at: string
         }
         Insert: {
+          avatar_url?: string | null
           created_at?: string
+          currency?: string
           email?: string | null
           full_name?: string
+          host_status?: string
           id: string
           is_host?: boolean
           phone_number?: string | null
           updated_at?: string
         }
         Update: {
+          avatar_url?: string | null
           created_at?: string
+          currency?: string
           email?: string | null
           full_name?: string
+          host_status?: string
           id?: string
           is_host?: boolean
           phone_number?: string | null
@@ -142,6 +268,7 @@ export type Database = {
           cleaning_fee: number
           cover_photo: string | null
           created_at: string
+          decision_note: string | null
           description: string
           host_id: string
           host_initials: string
@@ -152,6 +279,8 @@ export type Database = {
           house_rules: string[]
           id: string
           max_guests: number
+          original_currency: string
+          original_price: number
           pet_fee: number
           pet_friendly: boolean
           pet_rules: string | null
@@ -161,6 +290,7 @@ export type Database = {
           price_per_night: number
           property_category: string
           property_name: string
+          property_status: string
           rating: number
           rating_breakdown: Json
           review_count: number
@@ -185,6 +315,7 @@ export type Database = {
           cleaning_fee?: number
           cover_photo?: string | null
           created_at?: string
+          decision_note?: string | null
           description?: string
           host_id: string
           host_initials?: string
@@ -195,6 +326,8 @@ export type Database = {
           house_rules?: string[]
           id?: string
           max_guests?: number
+          original_currency?: string
+          original_price?: number
           pet_fee?: number
           pet_friendly?: boolean
           pet_rules?: string | null
@@ -204,6 +337,7 @@ export type Database = {
           price_per_night?: number
           property_category: string
           property_name: string
+          property_status?: string
           rating?: number
           rating_breakdown?: Json
           review_count?: number
@@ -228,6 +362,7 @@ export type Database = {
           cleaning_fee?: number
           cover_photo?: string | null
           created_at?: string
+          decision_note?: string | null
           description?: string
           host_id?: string
           host_initials?: string
@@ -238,6 +373,8 @@ export type Database = {
           house_rules?: string[]
           id?: string
           max_guests?: number
+          original_currency?: string
+          original_price?: number
           pet_fee?: number
           pet_friendly?: boolean
           pet_rules?: string | null
@@ -247,6 +384,7 @@ export type Database = {
           price_per_night?: number
           property_category?: string
           property_name?: string
+          property_status?: string
           rating?: number
           rating_breakdown?: Json
           review_count?: number
@@ -257,15 +395,125 @@ export type Database = {
         }
         Relationships: []
       }
+      property_reports: {
+        Row: {
+          created_at: string
+          details: string
+          id: string
+          property_id: string
+          reason: string
+          reporter_id: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          details?: string
+          id?: string
+          property_id: string
+          reason?: string
+          reporter_id: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          details?: string
+          id?: string
+          property_id?: string
+          reason?: string
+          reporter_id?: string
+          status?: string
+        }
+        Relationships: []
+      }
+      reviews: {
+        Row: {
+          author_id: string
+          booking_id: string | null
+          comment: string
+          created_at: string
+          id: string
+          property_id: string
+          rating: number
+          updated_at: string
+        }
+        Insert: {
+          author_id: string
+          booking_id?: string | null
+          comment?: string
+          created_at?: string
+          id?: string
+          property_id: string
+          rating?: number
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string
+          booking_id?: string | null
+          comment?: string
+          created_at?: string
+          id?: string
+          property_id?: string
+          rating?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          granted_by: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      assign_admin: { Args: { _user_id: string }; Returns: undefined }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_approved_host: { Args: { _user_id: string }; Returns: boolean }
+      is_staff: { Args: { _user_id: string }; Returns: boolean }
+      my_permissions: { Args: never; Returns: Json }
+      remove_admin: { Args: { _user_id: string }; Returns: undefined }
+      review_host_application: {
+        Args: { _application_id: string; _decision: string; _note?: string }
+        Returns: undefined
+      }
+      review_property: {
+        Args: { _note?: string; _property_id: string; _status: string }
+        Returns: undefined
+      }
+      set_host_status: {
+        Args: { _note?: string; _status: string; _user_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "owner" | "admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -392,6 +640,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["owner", "admin"],
+    },
   },
 } as const
