@@ -416,9 +416,10 @@ export function NestStoreProvider({ children }: { children: ReactNode }) {
           original_property_price: b.nightlyNpr,
           original_currency: "NPR",
           guest_currency: currency,
-          exchange_rate_used: converted ? converted.rate : null,
-          converted_amount: converted ? converted.amount : null,
-          rate_timestamp: rates?.fetchedAt ?? null,
+          ...(converted
+            ? { exchange_rate_used: converted.rate, converted_amount: converted.amount }
+            : {}),
+          ...(rates?.fetchedAt ? { rate_timestamp: rates.fetchedAt } : {}),
         })
         .select("*")
         .single();
