@@ -36,6 +36,8 @@ export type PropertyRow = {
   cancellation_policy: string;
   approval_status: string;
   status: string;
+  property_status: string;
+  decision_note?: string | null;
   host_name: string;
   host_initials: string;
   host_since: string;

@@ -22,6 +22,7 @@ import { PhotoUploader, type PhotoState } from "@/components/nest/PhotoUploader"
 import { MIN_PHOTOS } from "@/lib/nest-photos";
 import { formatNepalPhone, isValidNepalPhone, normalizeNepalPhone } from "@/lib/nest-validation";
 import { supabase } from "@/integrations/supabase/client";
+import { HostVerification } from "@/components/nest/HostVerification";
 
 export const Route = createFileRoute("/host")({
   head: () => ({
@@ -58,7 +59,18 @@ type Section = (typeof sections)[number];
 
 function HostDashboard() {
   const [section, setSection] = useState<Section>("Overview");
-  const { hostListings: listings, bookings, account } = useNest();
+  const { hostListings: listings, hostBookings, account, permissions, ready } = useNest();
+  const bookings = hostBookings;
+
+  if (ready && permissions.hostStatus !== "approved") {
+    return (
+      <Shell>
+        <section className="mx-auto max-w-2xl px-5 py-12">
+          <HostVerification />
+        </section>
+      </Shell>
+    );
+  }
 
   return (
     <Shell>
@@ -133,20 +145,41 @@ function Stat({ label, value }: { label: string; value: string }) {
 }
 
 function Overview({ listingCount }: { listingCount: number }) {
+  const { hostListings, hostBookings } = useNest();
+  const live = hostListings.filter((l) => l.row.property_status === "published").length;
+  const nights = hostBookings.reduce((sum, b) => sum + b.nights, 0);
+  const earnings = hostBookings
+    .filter((b) => b.status !== "cancelled")
+    .reduce((sum, b) => sum + b.total, 0);
+  const rated = hostListings.filter((l) => l.property.reviewCount > 0);
+  const rating = rated.length
+    ? rated.reduce((sum, l) => sum + l.property.rating, 0) / rated.length
+    : 0;
+
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <Stat label="Live listings" value={String(listingCount)} />
-      <Stat label="Nights booked (30d)" value="24" />
-      <Stat label="Earnings (30d)" value={formatNpr(78400)} />
-      <Stat label="Average rating" value="4.8" />
+      <Stat label="Live listings" value={String(live || 0)} />
+      <Stat label="Nights booked" value={String(nights)} />
+      <Stat label="Earnings" value={formatNpr(earnings)} />
+      <Stat label="Average rating" value={rating ? rating.toFixed(1) : "0"} />
+      {listingCount === 0 && (
+        <Panel className="sm:col-span-2 lg:col-span-4">
+          <p className="text-[14px] text-stone2">
+            No listings yet — use Add Property to submit your first stay for approval.
+          </p>
+        </Panel>
+      )}
     </div>
   );
 }
 
 const approvalCopy: Record<string, string> = {
-  approved: "Approved — live for guests",
-  pending: "Pending review",
-  rejected: "Needs changes",
+  draft: "Draft",
+  pending_approval: "Waiting for approval",
+  published: "Published — live for guests",
+  rejected: "Not approved — needs changes",
+  suspended: "Suspended by NestNepal",
+  removed: "Removed",
 };
 
 function MyProperties({ listings }: { listings: HostListing[] }) {
@@ -191,11 +224,11 @@ function MyProperties({ listings }: { listings: HostListing[] }) {
               <p className="font-display text-base font-semibold">{formatNpr(l.price)}</p>
               <p className="text-[11px] text-stone2">/ night</p>
               <p className="mt-2 rounded-full bg-cream px-2.5 py-1 text-[11px] font-semibold text-brand-deep">
-                {approvalCopy[row.approval_status] ?? "Pending review"}
+                {approvalCopy[row.property_status] ?? "Waiting for approval"}
               </p>
-              <p className="mt-1 text-[11px] text-stone2">
-                {row.status === "published" ? "Published" : "Draft"}
-              </p>
+              {row.decision_note && (
+                <p className="mt-1 text-[11px] text-stone2">{row.decision_note}</p>
+              )}
             </div>
           </div>
         </Panel>
@@ -318,7 +351,10 @@ function AddProperty() {
       pet_fee: form.petFriendly ? form.petFee : 0,
       pet_rules: form.petFriendly && petRules ? petRules : null,
       host_name: account.name,
-      status: "published",
+      status: "unpublished",
+      property_status: "pending_approval",
+      original_price: form.price,
+      original_currency: "NPR",
     });
     setBusy(false);
     if (insertError) {

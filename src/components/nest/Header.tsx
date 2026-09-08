@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { useNest } from "@/lib/nest-store";
+import { CurrencySelect } from "./CurrencySelect";
 import logoAsset from "@/assets/nestnepal-logo.jpg.asset.json";
 
 const links = [
@@ -12,7 +13,8 @@ const links = [
 
 export function Header() {
   const [open, setOpen] = useState(false);
-  const { account, favorites } = useNest();
+  const { account, favorites, permissions } = useNest();
+  const isHost = permissions.hostStatus === "approved";
 
   return (
     <header className="sticky top-0 z-40 border-b border-sand/80 bg-cream/90 backdrop-blur-md">
@@ -30,7 +32,6 @@ export function Header() {
           </span>
         </Link>
 
-
         <nav className="hidden items-center gap-1 lg:flex">
           {links.map((l) => (
             <Link
@@ -45,11 +46,28 @@ export function Header() {
             </Link>
           ))}
           <Link
-            to="/account"
+            to="/saved"
             className="ml-1 rounded-full px-3 py-2 text-sm font-semibold text-stone2 transition-colors hover:text-ink"
           >
             Saved{favorites.length ? ` (${favorites.length})` : ""}
           </Link>
+          {isHost && (
+            <Link
+              to="/host"
+              className="rounded-full px-3 py-2 text-sm font-semibold text-stone2 transition-colors hover:text-ink"
+            >
+              Host
+            </Link>
+          )}
+          {permissions.isStaff && (
+            <Link
+              to="/admin"
+              className="rounded-full px-3 py-2 text-sm font-semibold text-brand-deep transition-colors"
+            >
+              Admin
+            </Link>
+          )}
+          <CurrencySelect className="ml-1" />
           {account.signedIn ? (
             <Link
               to="/account"
@@ -75,18 +93,21 @@ export function Header() {
           )}
         </nav>
 
-        <button
-          onClick={() => setOpen((o) => !o)}
-          className="grid size-10 shrink-0 place-items-center rounded-full text-ink/70 transition-colors hover:bg-sand lg:hidden"
-          aria-label="Menu"
-          aria-expanded={open}
-        >
-          <span className="relative block h-3.5 w-5">
-            <span className="absolute top-0 h-0.5 w-full rounded bg-current" />
-            <span className="absolute top-1.5 h-0.5 w-full rounded bg-current" />
-            <span className="absolute top-3 h-0.5 w-full rounded bg-current" />
-          </span>
-        </button>
+        <div className="flex items-center gap-2 lg:hidden">
+          <CurrencySelect />
+          <button
+            onClick={() => setOpen((o) => !o)}
+            className="grid size-10 shrink-0 place-items-center rounded-full text-ink/70 transition-colors hover:bg-sand"
+            aria-label="Menu"
+            aria-expanded={open}
+          >
+            <span className="relative block h-3.5 w-5">
+              <span className="absolute top-0 h-0.5 w-full rounded bg-current" />
+              <span className="absolute top-1.5 h-0.5 w-full rounded bg-current" />
+              <span className="absolute top-3 h-0.5 w-full rounded bg-current" />
+            </span>
+          </button>
+        </div>
       </div>
 
       {open && (
@@ -107,31 +128,44 @@ export function Header() {
               onClick={() => setOpen(false)}
               className="rounded-2xl px-3 py-2.5 text-sm font-semibold text-ink transition-colors hover:bg-sand"
             >
-              My account
+              My profile
             </Link>
-            <Link
-              to="/host"
-              onClick={() => setOpen(false)}
-              className="rounded-2xl px-3 py-2.5 text-sm font-semibold text-ink transition-colors hover:bg-sand"
-            >
-              Host dashboard
-            </Link>
-            <div className="mt-2 grid grid-cols-2 gap-2">
+            {isHost && (
               <Link
-                to="/login"
+                to="/host"
                 onClick={() => setOpen(false)}
-                className="rounded-2xl border border-sand bg-surface py-2.5 text-center text-sm font-semibold"
+                className="rounded-2xl px-3 py-2.5 text-sm font-semibold text-ink transition-colors hover:bg-sand"
               >
-                Login
+                Host dashboard
               </Link>
+            )}
+            {permissions.isStaff && (
               <Link
-                to="/signup"
+                to="/admin"
                 onClick={() => setOpen(false)}
-                className="rounded-2xl bg-ink py-2.5 text-center text-sm font-semibold text-cream"
+                className="rounded-2xl px-3 py-2.5 text-sm font-semibold text-brand-deep transition-colors hover:bg-sand"
               >
-                Sign Up
+                Admin dashboard
               </Link>
-            </div>
+            )}
+            {!account.signedIn && (
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <Link
+                  to="/login"
+                  onClick={() => setOpen(false)}
+                  className="rounded-2xl border border-sand bg-surface py-2.5 text-center text-sm font-semibold"
+                >
+                  Login
+                </Link>
+                <Link
+                  to="/signup"
+                  onClick={() => setOpen(false)}
+                  className="rounded-2xl bg-ink py-2.5 text-center text-sm font-semibold text-cream"
+                >
+                  Sign Up
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       )}

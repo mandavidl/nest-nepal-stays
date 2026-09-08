@@ -12,10 +12,14 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as AccountRouteImport } from './routes/account'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as BecomeAHostRouteImport } from './routes/become-a-host'
 import { Route as ExploreRouteImport } from './routes/explore'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as HostRouteImport } from './routes/host'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as SavedRouteImport } from './routes/saved'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as BookPropertyIdRouteImport } from './routes/book.$propertyId'
 import { Route as PropertyPropertyIdRouteImport } from './routes/property.$propertyId'
@@ -35,6 +39,11 @@ const AccountRoute = AccountRouteImport.update({
   path: '/account',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BecomeAHostRoute = BecomeAHostRouteImport.update({
   id: '/become-a-host',
   path: '/become-a-host',
@@ -45,6 +54,11 @@ const ExploreRoute = ExploreRouteImport.update({
   path: '/explore',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const HostRoute = HostRouteImport.update({
   id: '/host',
   path: '/host',
@@ -53,6 +67,16 @@ const HostRoute = HostRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SavedRoute = SavedRouteImport.update({
+  id: '/saved',
+  path: '/saved',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SignupRoute = SignupRouteImport.update({
@@ -75,10 +99,14 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/account': typeof AccountRoute
+  '/admin': typeof AdminRoute
   '/become-a-host': typeof BecomeAHostRoute
   '/explore': typeof ExploreRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/host': typeof HostRoute
   '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/saved': typeof SavedRoute
   '/signup': typeof SignupRoute
   '/book/$propertyId': typeof BookPropertyIdRoute
   '/property/$propertyId': typeof PropertyPropertyIdRoute
@@ -87,10 +115,14 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/account': typeof AccountRoute
+  '/admin': typeof AdminRoute
   '/become-a-host': typeof BecomeAHostRoute
   '/explore': typeof ExploreRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/host': typeof HostRoute
   '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/saved': typeof SavedRoute
   '/signup': typeof SignupRoute
   '/book/$propertyId': typeof BookPropertyIdRoute
   '/property/$propertyId': typeof PropertyPropertyIdRoute
@@ -100,10 +132,14 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/account': typeof AccountRoute
+  '/admin': typeof AdminRoute
   '/become-a-host': typeof BecomeAHostRoute
   '/explore': typeof ExploreRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/host': typeof HostRoute
   '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/saved': typeof SavedRoute
   '/signup': typeof SignupRoute
   '/book/$propertyId': typeof BookPropertyIdRoute
   '/property/$propertyId': typeof PropertyPropertyIdRoute
@@ -114,10 +150,14 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/account'
+    | '/admin'
     | '/become-a-host'
     | '/explore'
+    | '/forgot-password'
     | '/host'
     | '/login'
+    | '/reset-password'
+    | '/saved'
     | '/signup'
     | '/book/$propertyId'
     | '/property/$propertyId'
@@ -126,10 +166,14 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/account'
+    | '/admin'
     | '/become-a-host'
     | '/explore'
+    | '/forgot-password'
     | '/host'
     | '/login'
+    | '/reset-password'
+    | '/saved'
     | '/signup'
     | '/book/$propertyId'
     | '/property/$propertyId'
@@ -138,10 +182,14 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/account'
+    | '/admin'
     | '/become-a-host'
     | '/explore'
+    | '/forgot-password'
     | '/host'
     | '/login'
+    | '/reset-password'
+    | '/saved'
     | '/signup'
     | '/book/$propertyId'
     | '/property/$propertyId'
@@ -151,10 +199,14 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
   AccountRoute: typeof AccountRoute
+  AdminRoute: typeof AdminRoute
   BecomeAHostRoute: typeof BecomeAHostRoute
   ExploreRoute: typeof ExploreRoute
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
   HostRoute: typeof HostRoute
   LoginRoute: typeof LoginRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
+  SavedRoute: typeof SavedRoute
   SignupRoute: typeof SignupRoute
   BookPropertyIdRoute: typeof BookPropertyIdRoute
   PropertyPropertyIdRoute: typeof PropertyPropertyIdRoute
@@ -183,6 +235,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AccountRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/become-a-host': {
       id: '/become-a-host'
       path: '/become-a-host'
@@ -197,6 +256,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ExploreRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/host': {
       id: '/host'
       path: '/host'
@@ -209,6 +275,20 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/saved': {
+      id: '/saved'
+      path: '/saved'
+      fullPath: '/saved'
+      preLoaderRoute: typeof SavedRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/signup': {
@@ -239,10 +319,14 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
   AccountRoute: AccountRoute,
+  AdminRoute: AdminRoute,
   BecomeAHostRoute: BecomeAHostRoute,
   ExploreRoute: ExploreRoute,
+  ForgotPasswordRoute: ForgotPasswordRoute,
   HostRoute: HostRoute,
   LoginRoute: LoginRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
+  SavedRoute: SavedRoute,
   SignupRoute: SignupRoute,
   BookPropertyIdRoute: BookPropertyIdRoute,
   PropertyPropertyIdRoute: PropertyPropertyIdRoute,

@@ -82,6 +82,7 @@ function BookingFlow() {
         guests,
         nights,
         total: q.total,
+        nightlyNpr: property.price,
         hostName: property.host.name,
         hostPhone: property.host.phone ?? null,
       });
