@@ -145,12 +145,30 @@ function Stat({ label, value }: { label: string; value: string }) {
 }
 
 function Overview({ listingCount }: { listingCount: number }) {
+  const { hostListings, hostBookings } = useNest();
+  const live = hostListings.filter((l) => l.row.property_status === "published").length;
+  const nights = hostBookings.reduce((sum, b) => sum + b.nights, 0);
+  const earnings = hostBookings
+    .filter((b) => b.status !== "cancelled")
+    .reduce((sum, b) => sum + b.total, 0);
+  const rated = hostListings.filter((l) => l.property.reviewCount > 0);
+  const rating = rated.length
+    ? rated.reduce((sum, l) => sum + l.property.rating, 0) / rated.length
+    : 0;
+
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <Stat label="Live listings" value={String(listingCount)} />
-      <Stat label="Nights booked (30d)" value="24" />
-      <Stat label="Earnings (30d)" value={formatNpr(78400)} />
-      <Stat label="Average rating" value="4.8" />
+      <Stat label="Live listings" value={String(live || 0)} />
+      <Stat label="Nights booked" value={String(nights)} />
+      <Stat label="Earnings" value={formatNpr(earnings)} />
+      <Stat label="Average rating" value={rating ? rating.toFixed(1) : "0"} />
+      {listingCount === 0 && (
+        <Panel className="sm:col-span-2 lg:col-span-4">
+          <p className="text-[14px] text-stone2">
+            No listings yet — use Add Property to submit your first stay for approval.
+          </p>
+        </Panel>
+      )}
     </div>
   );
 }
