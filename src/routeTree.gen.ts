@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as AccountRouteImport } from './routes/account'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as BecomeAHostRouteImport } from './routes/become-a-host'
 import { Route as ExploreRouteImport } from './routes/explore'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
@@ -36,6 +37,11 @@ const AboutRoute = AboutRouteImport.update({
 const AccountRoute = AccountRouteImport.update({
   id: '/account',
   path: '/account',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BecomeAHostRoute = BecomeAHostRouteImport.update({
@@ -93,6 +99,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/account': typeof AccountRoute
+  '/admin': typeof AdminRoute
   '/become-a-host': typeof BecomeAHostRoute
   '/explore': typeof ExploreRoute
   '/forgot-password': typeof ForgotPasswordRoute
@@ -108,6 +115,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/account': typeof AccountRoute
+  '/admin': typeof AdminRoute
   '/become-a-host': typeof BecomeAHostRoute
   '/explore': typeof ExploreRoute
   '/forgot-password': typeof ForgotPasswordRoute
@@ -124,6 +132,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/account': typeof AccountRoute
+  '/admin': typeof AdminRoute
   '/become-a-host': typeof BecomeAHostRoute
   '/explore': typeof ExploreRoute
   '/forgot-password': typeof ForgotPasswordRoute
@@ -141,6 +150,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/account'
+    | '/admin'
     | '/become-a-host'
     | '/explore'
     | '/forgot-password'
@@ -156,6 +166,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/account'
+    | '/admin'
     | '/become-a-host'
     | '/explore'
     | '/forgot-password'
@@ -171,6 +182,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/account'
+    | '/admin'
     | '/become-a-host'
     | '/explore'
     | '/forgot-password'
@@ -187,6 +199,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
   AccountRoute: typeof AccountRoute
+  AdminRoute: typeof AdminRoute
   BecomeAHostRoute: typeof BecomeAHostRoute
   ExploreRoute: typeof ExploreRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
@@ -220,6 +233,13 @@ declare module '@tanstack/react-router' {
       path: '/account'
       fullPath: '/account'
       preLoaderRoute: typeof AccountRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/become-a-host': {
@@ -299,6 +319,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
   AccountRoute: AccountRoute,
+  AdminRoute: AdminRoute,
   BecomeAHostRoute: BecomeAHostRoute,
   ExploreRoute: ExploreRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
