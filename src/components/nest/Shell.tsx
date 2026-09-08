@@ -6,8 +6,8 @@ import { Footer } from "./Footer";
 const tabs = [
   { to: "/", label: "Home", glyph: "⌂", exact: true },
   { to: "/explore", label: "Explore", glyph: "◎", exact: false },
-  { to: "/account", label: "Saved", glyph: "♥", exact: false },
-  { to: "/host", label: "Host", glyph: "◈", exact: false },
+  { to: "/saved", label: "Saved", glyph: "♥", exact: false },
+  { to: "/account", label: "My Profile", glyph: "◍", exact: false },
 ] as const;
 
 export function Shell({ children }: { children: ReactNode }) {
