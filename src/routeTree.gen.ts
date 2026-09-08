@@ -16,6 +16,7 @@ import { Route as BecomeAHostRouteImport } from './routes/become-a-host'
 import { Route as ExploreRouteImport } from './routes/explore'
 import { Route as HostRouteImport } from './routes/host'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as SavedRouteImport } from './routes/saved'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as BookPropertyIdRouteImport } from './routes/book.$propertyId'
 import { Route as PropertyPropertyIdRouteImport } from './routes/property.$propertyId'
@@ -55,6 +56,11 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SavedRoute = SavedRouteImport.update({
+  id: '/saved',
+  path: '/saved',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
@@ -79,6 +85,7 @@ export interface FileRoutesByFullPath {
   '/explore': typeof ExploreRoute
   '/host': typeof HostRoute
   '/login': typeof LoginRoute
+  '/saved': typeof SavedRoute
   '/signup': typeof SignupRoute
   '/book/$propertyId': typeof BookPropertyIdRoute
   '/property/$propertyId': typeof PropertyPropertyIdRoute
@@ -91,6 +98,7 @@ export interface FileRoutesByTo {
   '/explore': typeof ExploreRoute
   '/host': typeof HostRoute
   '/login': typeof LoginRoute
+  '/saved': typeof SavedRoute
   '/signup': typeof SignupRoute
   '/book/$propertyId': typeof BookPropertyIdRoute
   '/property/$propertyId': typeof PropertyPropertyIdRoute
@@ -104,6 +112,7 @@ export interface FileRoutesById {
   '/explore': typeof ExploreRoute
   '/host': typeof HostRoute
   '/login': typeof LoginRoute
+  '/saved': typeof SavedRoute
   '/signup': typeof SignupRoute
   '/book/$propertyId': typeof BookPropertyIdRoute
   '/property/$propertyId': typeof PropertyPropertyIdRoute
@@ -118,6 +127,7 @@ export interface FileRouteTypes {
     | '/explore'
     | '/host'
     | '/login'
+    | '/saved'
     | '/signup'
     | '/book/$propertyId'
     | '/property/$propertyId'
@@ -130,6 +140,7 @@ export interface FileRouteTypes {
     | '/explore'
     | '/host'
     | '/login'
+    | '/saved'
     | '/signup'
     | '/book/$propertyId'
     | '/property/$propertyId'
@@ -142,6 +153,7 @@ export interface FileRouteTypes {
     | '/explore'
     | '/host'
     | '/login'
+    | '/saved'
     | '/signup'
     | '/book/$propertyId'
     | '/property/$propertyId'
@@ -155,6 +167,7 @@ export interface RootRouteChildren {
   ExploreRoute: typeof ExploreRoute
   HostRoute: typeof HostRoute
   LoginRoute: typeof LoginRoute
+  SavedRoute: typeof SavedRoute
   SignupRoute: typeof SignupRoute
   BookPropertyIdRoute: typeof BookPropertyIdRoute
   PropertyPropertyIdRoute: typeof PropertyPropertyIdRoute
@@ -211,6 +224,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/saved': {
+      id: '/saved'
+      path: '/saved'
+      fullPath: '/saved'
+      preLoaderRoute: typeof SavedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/signup': {
       id: '/signup'
       path: '/signup'
@@ -243,6 +263,7 @@ const rootRouteChildren: RootRouteChildren = {
   ExploreRoute: ExploreRoute,
   HostRoute: HostRoute,
   LoginRoute: LoginRoute,
+  SavedRoute: SavedRoute,
   SignupRoute: SignupRoute,
   BookPropertyIdRoute: BookPropertyIdRoute,
   PropertyPropertyIdRoute: PropertyPropertyIdRoute,

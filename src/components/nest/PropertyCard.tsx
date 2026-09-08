@@ -3,8 +3,9 @@ import { formatNpr, type Property } from "@/lib/nest-data";
 import { useNest } from "@/lib/nest-store";
 
 export function PropertyCard({ property }: { property: Property }) {
-  const { isFavorite, toggleFavorite } = useNest();
+  const { isFavorite, toggleFavorite, altPrice } = useNest();
   const saved = isFavorite(property.id);
+  const alt = altPrice(property.price);
 
   return (
     <article className="group relative overflow-hidden rounded-3xl border border-sand bg-surface shadow-card transition-all duration-300 hover:-translate-y-1 hover:shadow-lift">
@@ -46,6 +47,7 @@ export function PropertyCard({ property }: { property: Property }) {
                 {formatNpr(property.price)}
               </p>
               <p className="text-[11px] text-stone2">/ night</p>
+              {alt && <p className="text-[11px] text-stone2">{alt}</p>}
             </div>
           </div>
           <div className="mt-3 flex flex-wrap gap-1.5">
