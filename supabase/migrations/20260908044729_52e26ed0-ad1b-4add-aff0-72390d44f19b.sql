@@ -1,0 +1,25 @@
+REVOKE ALL ON FUNCTION public.handle_new_user() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.set_updated_at() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.validate_property_listing() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.guard_profile_privileges() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.guard_property_status() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.sync_host_status_on_application() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.has_role(uuid, public.app_role) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.is_staff(uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.is_approved_host(uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.my_permissions() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.review_host_application(uuid, text, text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.set_host_status(uuid, text, text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.review_property(text, text, text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.assign_admin(uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.remove_admin(uuid) FROM PUBLIC;
+
+GRANT EXECUTE ON FUNCTION public.has_role(uuid, public.app_role) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.is_staff(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.is_approved_host(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.my_permissions() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.review_host_application(uuid, text, text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.set_host_status(uuid, text, text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.review_property(text, text, text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.assign_admin(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.remove_admin(uuid) TO authenticated;
