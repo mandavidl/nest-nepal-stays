@@ -171,7 +171,7 @@ function HostApplications() {
     const { error } = await supabase.rpc("review_host_application", {
       _application_id: id,
       _decision: decision,
-      _note: note || undefined,
+      ...(note ? { _note: note } : {}),
     });
     setNotice(error ? error.message : `Application ${decision}.`);
     setNote("");
@@ -258,7 +258,6 @@ function PropertyQueue() {
     const { error } = await supabase.rpc("review_property", {
       _property_id: id,
       _status: status,
-      _note: undefined,
     });
     setNotice(error ? error.message : `Listing set to ${status.replace("_", " ")}.`);
     await load();
