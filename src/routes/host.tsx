@@ -351,7 +351,10 @@ function AddProperty() {
       pet_fee: form.petFriendly ? form.petFee : 0,
       pet_rules: form.petFriendly && petRules ? petRules : null,
       host_name: account.name,
-      status: "published",
+      status: "unpublished",
+      property_status: "pending_approval",
+      original_price: form.price,
+      original_currency: "NPR",
     });
     setBusy(false);
     if (insertError) {
