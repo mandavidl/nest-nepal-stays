@@ -22,6 +22,7 @@ import { PhotoUploader, type PhotoState } from "@/components/nest/PhotoUploader"
 import { MIN_PHOTOS } from "@/lib/nest-photos";
 import { formatNepalPhone, isValidNepalPhone, normalizeNepalPhone } from "@/lib/nest-validation";
 import { supabase } from "@/integrations/supabase/client";
+import { HostVerification } from "@/components/nest/HostVerification";
 
 export const Route = createFileRoute("/host")({
   head: () => ({
