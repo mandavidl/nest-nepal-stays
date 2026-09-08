@@ -12,6 +12,31 @@ import { supabase } from "@/integrations/supabase/client";
 import { properties as demoProperties, type CategoryId, type Property } from "./nest-data";
 import { mapRowToProperty, orderedPhotoPaths, type PropertyRow } from "./property-mapper";
 import { signPhotoPaths } from "./nest-photos";
+import { getExchangeRates } from "./currency.functions";
+import {
+  convertFromNpr,
+  formatMoney,
+  isCurrencyCode,
+  type CurrencyCode,
+  type RateTable,
+} from "./currency";
+
+export type HostStatus = "not_host" | "pending" | "approved" | "rejected" | "suspended";
+
+export type PropertyStatus =
+  | "draft"
+  | "pending_approval"
+  | "published"
+  | "rejected"
+  | "suspended"
+  | "removed";
+
+export type Permissions = {
+  isOwner: boolean;
+  isAdmin: boolean;
+  isStaff: boolean;
+  hostStatus: HostStatus;
+};
 
 export type Booking = {
   id: string;
@@ -30,6 +55,10 @@ export type Booking = {
   total: number;
   status: "upcoming" | "completed" | "cancelled";
   reviewed: boolean;
+  guestCurrency: CurrencyCode;
+  convertedAmount: number | null;
+  exchangeRateUsed: number | null;
+  rateTimestamp: string | null;
 };
 
 export type NewBooking = {
@@ -45,6 +74,7 @@ export type NewBooking = {
   guests: number;
   nights: number;
   total: number;
+  nightlyNpr: number;
 };
 
 export type HostListing = {
@@ -53,20 +83,41 @@ export type HostListing = {
   photoUrls: Record<string, string>;
 };
 
+export type HostApplication = {
+  id: string;
+  status: HostStatus | "pending" | "approved" | "rejected";
+  message: string | null;
+  decisionNote: string | null;
+  createdAt: string;
+};
+
 export type Profile = {
   id: string;
   name: string;
   email: string;
   phone: string;
-  isHost: boolean;
+  avatarUrl: string | null;
+  currency: CurrencyCode;
+  hostStatus: HostStatus;
+  createdAt: string | null;
 };
 
-type Account = { id: string | null; name: string; email: string; phone: string; signedIn: boolean };
+type Account = {
+  id: string | null;
+  name: string;
+  email: string;
+  phone: string;
+  avatarUrl: string | null;
+  createdAt: string | null;
+  signedIn: boolean;
+};
 
 type Store = {
   ready: boolean;
   user: User | null;
   account: Account;
+  profile: Profile | null;
+  permissions: Permissions;
   catalog: Property[];
   catalogLoading: boolean;
   propertyLookup: (id: string) => Property | undefined;
@@ -76,13 +127,34 @@ type Store = {
   bookings: Booking[];
   addBooking: (b: NewBooking) => Promise<Booking>;
   hostListings: HostListing[];
+  hostBookings: Booking[];
   refreshHostListings: () => Promise<void>;
   refreshCatalog: () => Promise<void>;
-  updateProfile: (patch: { name?: string; phone?: string }) => Promise<void>;
+  updateProfile: (patch: {
+    name?: string;
+    phone?: string;
+    avatarUrl?: string | null;
+  }) => Promise<void>;
+  hostApplication: HostApplication | null;
+  requestHostVerification: (message: string, phone: string) => Promise<void>;
+  currency: CurrencyCode;
+  setCurrency: (code: CurrencyCode) => Promise<void>;
+  rates: RateTable | null;
+  /** Converted price in the guest's chosen currency, or null when NPR is selected / no rate. */
+  altPrice: (npr: number) => string | null;
   signOut: () => Promise<void>;
 };
 
 const StoreContext = createContext<Store | null>(null);
+
+const CURRENCY_KEY = "nestnepal-currency";
+
+const guestPermissions: Permissions = {
+  isOwner: false,
+  isAdmin: false,
+  isStaff: false,
+  hostStatus: "not_host",
+};
 
 const mapBooking = (row: Record<string, unknown>): Booking => ({
   id: String(row["id"]),
@@ -101,31 +173,81 @@ const mapBooking = (row: Record<string, unknown>): Booking => ({
   total: Number(row["total"] ?? 0),
   status: (row["status"] as Booking["status"]) ?? "upcoming",
   reviewed: Boolean(row["reviewed"]),
+  guestCurrency: (isCurrencyCode(String(row["guest_currency"] ?? "NPR"))
+    ? String(row["guest_currency"])
+    : "NPR") as CurrencyCode,
+  convertedAmount: row["converted_amount"] === null ? null : Number(row["converted_amount"]),
+  exchangeRateUsed: row["exchange_rate_used"] === null ? null : Number(row["exchange_rate_used"]),
+  rateTimestamp: (row["rate_timestamp"] as string | null) ?? null,
 });
 
 export function NestStoreProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [permissions, setPermissions] = useState<Permissions>(guestPermissions);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [hostListings, setHostListings] = useState<HostListing[]>([]);
+  const [hostBookings, setHostBookings] = useState<Booking[]>([]);
+  const [hostApplication, setHostApplication] = useState<HostApplication | null>(null);
   const [dbProperties, setDbProperties] = useState<Property[]>([]);
   const [catalogLoading, setCatalogLoading] = useState(true);
+  const [currency, setCurrencyState] = useState<CurrencyCode>("NPR");
+  const [rates, setRates] = useState<RateTable | null>(null);
 
   const loadProfile = useCallback(async (u: User) => {
     const { data } = await supabase
       .from("profiles")
-      .select("id, full_name, email, phone_number, is_host")
+      .select("id, full_name, email, phone_number, avatar_url, currency, host_status, created_at")
       .eq("id", u.id)
       .maybeSingle();
+    const code = isCurrencyCode(String(data?.currency ?? "NPR"))
+      ? (String(data?.currency) as CurrencyCode)
+      : "NPR";
     setProfile({
       id: u.id,
       name: data?.full_name || (u.email?.split("@")[0] ?? "Guest"),
       email: data?.email || u.email || "",
       phone: data?.phone_number || "",
-      isHost: Boolean(data?.is_host),
+      avatarUrl: data?.avatar_url ?? null,
+      currency: code,
+      hostStatus: (data?.host_status as HostStatus) ?? "not_host",
+      createdAt: data?.created_at ?? null,
     });
+    setCurrencyState(code);
+  }, []);
+
+  const loadPermissions = useCallback(async () => {
+    const { data } = await supabase.rpc("my_permissions");
+    const p = (data ?? {}) as Record<string, unknown>;
+    setPermissions({
+      isOwner: Boolean(p["is_owner"]),
+      isAdmin: Boolean(p["is_admin"]),
+      isStaff: Boolean(p["is_staff"]),
+      hostStatus: (p["host_status"] as HostStatus) ?? "not_host",
+    });
+  }, []);
+
+  const loadHostApplication = useCallback(async (u: User) => {
+    const { data } = await supabase
+      .from("host_applications")
+      .select("id, status, message, decision_note, created_at")
+      .eq("user_id", u.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    setHostApplication(
+      data
+        ? {
+            id: data.id,
+            status: data.status as HostApplication["status"],
+            message: data.message,
+            decisionNote: data.decision_note,
+            createdAt: data.created_at,
+          }
+        : null,
+    );
   }, []);
 
   const loadFavorites = useCallback(async () => {
@@ -133,24 +255,45 @@ export function NestStoreProvider({ children }: { children: ReactNode }) {
     setFavorites((data ?? []).map((f) => f.property_id));
   }, []);
 
-  const loadBookings = useCallback(async () => {
+  const loadBookings = useCallback(async (u: User) => {
     const { data } = await supabase
       .from("bookings")
       .select("*")
+      .eq("guest_id", u.id)
       .order("check_in", { ascending: false });
     setBookings((data ?? []).map((row) => mapBooking(row as Record<string, unknown>)));
   }, []);
 
   const refreshHostListings = useCallback(async () => {
+    const { data: sessionData } = await supabase.auth.getUser();
+    const uid = sessionData.user?.id;
+    if (!uid) {
+      setHostListings([]);
+      setHostBookings([]);
+      return;
+    }
     const { data } = await supabase
       .from("properties")
       .select("*")
+      .eq("host_id", uid)
       .order("created_at", { ascending: false });
     const rows = (data ?? []) as unknown as PropertyRow[];
     const urls = await signPhotoPaths([...new Set(rows.flatMap((r) => orderedPhotoPaths(r)))]);
     setHostListings(
       rows.map((row) => ({ row, photoUrls: urls, property: mapRowToProperty(row, urls) })),
     );
+
+    const ids = rows.map((r) => r.id);
+    if (!ids.length) {
+      setHostBookings([]);
+      return;
+    }
+    const { data: hb } = await supabase
+      .from("bookings")
+      .select("*")
+      .in("property_id", ids)
+      .order("check_in", { ascending: false });
+    setHostBookings((hb ?? []).map((row) => mapBooking(row as Record<string, unknown>)));
   }, []);
 
   const refreshCatalog = useCallback(async () => {
@@ -158,8 +301,7 @@ export function NestStoreProvider({ children }: { children: ReactNode }) {
     const { data } = await supabase
       .from("properties")
       .select("*")
-      .eq("approval_status", "approved")
-      .eq("status", "published")
+      .eq("property_status", "published")
       .order("created_at", { ascending: false });
     const rows = (data ?? []) as unknown as PropertyRow[];
     const urls = await signPhotoPaths([...new Set(rows.flatMap((r) => orderedPhotoPaths(r)))]);
@@ -176,16 +318,23 @@ export function NestStoreProvider({ children }: { children: ReactNode }) {
       setUser(nextUser);
       if (!nextUser) {
         setProfile(null);
+        setPermissions(guestPermissions);
         setFavorites([]);
         setBookings([]);
         setHostListings([]);
+        setHostBookings([]);
+        setHostApplication(null);
+        const stored = typeof window !== "undefined" ? localStorage.getItem(CURRENCY_KEY) : null;
+        if (stored && isCurrencyCode(stored)) setCurrencyState(stored);
         setReady(true);
         return;
       }
       await Promise.all([
         loadProfile(nextUser),
+        loadPermissions(),
+        loadHostApplication(nextUser),
         loadFavorites(),
-        loadBookings(),
+        loadBookings(nextUser),
         refreshHostListings(),
       ]);
       if (active) setReady(true);
@@ -199,12 +348,25 @@ export function NestStoreProvider({ children }: { children: ReactNode }) {
 
     void supabase.auth.getSession().then(({ data }) => applySession(data.session));
     void refreshCatalog();
+    void getExchangeRates()
+      .then((table) => {
+        if (active) setRates(table);
+      })
+      .catch(() => undefined);
 
     return () => {
       active = false;
       sub.subscription.unsubscribe();
     };
-  }, [loadProfile, loadFavorites, loadBookings, refreshHostListings, refreshCatalog]);
+  }, [
+    loadProfile,
+    loadPermissions,
+    loadHostApplication,
+    loadFavorites,
+    loadBookings,
+    refreshHostListings,
+    refreshCatalog,
+  ]);
 
   const catalog = useMemo(() => [...dbProperties, ...demoProperties], [dbProperties]);
 
@@ -234,6 +396,7 @@ export function NestStoreProvider({ children }: { children: ReactNode }) {
   const addBooking = useCallback(
     async (b: NewBooking) => {
       if (!user) throw new Error("Please log in to confirm this booking.");
+      const converted = convertFromNpr(b.total, currency, rates);
       const { data, error } = await supabase
         .from("bookings")
         .insert({
@@ -250,6 +413,12 @@ export function NestStoreProvider({ children }: { children: ReactNode }) {
           guests: b.guests,
           nights: b.nights,
           total: b.total,
+          original_property_price: b.nightlyNpr,
+          original_currency: "NPR",
+          guest_currency: currency,
+          exchange_rate_used: converted ? converted.rate : null,
+          converted_amount: converted ? converted.amount : null,
+          rate_timestamp: rates?.fetchedAt ?? null,
         })
         .select("*")
         .single();
@@ -258,35 +427,96 @@ export function NestStoreProvider({ children }: { children: ReactNode }) {
       setBookings((prev) => [booking, ...prev]);
       return booking;
     },
-    [user],
+    [user, currency, rates],
   );
 
   const updateProfile = useCallback(
-    async (patch: { name?: string; phone?: string }) => {
+    async (patch: { name?: string; phone?: string; avatarUrl?: string | null }) => {
       if (!user) return;
       const { error } = await supabase
         .from("profiles")
         .update({
           ...(patch.name !== undefined ? { full_name: patch.name } : {}),
           ...(patch.phone !== undefined ? { phone_number: patch.phone } : {}),
+          ...(patch.avatarUrl !== undefined ? { avatar_url: patch.avatarUrl } : {}),
         })
         .eq("id", user.id);
       if (error) throw new Error(error.message);
       setProfile((p) =>
-        p ? { ...p, name: patch.name ?? p.name, phone: patch.phone ?? p.phone } : p,
+        p
+          ? {
+              ...p,
+              name: patch.name ?? p.name,
+              phone: patch.phone ?? p.phone,
+              avatarUrl: patch.avatarUrl !== undefined ? patch.avatarUrl : p.avatarUrl,
+            }
+          : p,
       );
     },
     [user],
+  );
+
+  const setCurrency = useCallback(
+    async (code: CurrencyCode) => {
+      setCurrencyState(code);
+      if (typeof window !== "undefined") localStorage.setItem(CURRENCY_KEY, code);
+      if (user) {
+        await supabase.from("profiles").update({ currency: code }).eq("id", user.id);
+        setProfile((p) => (p ? { ...p, currency: code } : p));
+      }
+    },
+    [user],
+  );
+
+  const requestHostVerification = useCallback(
+    async (message: string, phone: string) => {
+      if (!user) throw new Error("Please log in first.");
+      const { data, error } = await supabase
+        .from("host_applications")
+        .insert({
+          user_id: user.id,
+          full_name: profile?.name ?? "",
+          email: profile?.email ?? user.email ?? "",
+          phone_number: phone,
+          message,
+          status: "pending",
+        })
+        .select("id, status, message, decision_note, created_at")
+        .single();
+      if (error) throw new Error(error.message);
+      setHostApplication({
+        id: data.id,
+        status: data.status as HostApplication["status"],
+        message: data.message,
+        decisionNote: data.decision_note,
+        createdAt: data.created_at,
+      });
+      await Promise.all([loadPermissions(), loadProfile(user)]);
+    },
+    [user, profile, loadPermissions, loadProfile],
   );
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
     setUser(null);
     setProfile(null);
+    setPermissions(guestPermissions);
     setFavorites([]);
     setBookings([]);
     setHostListings([]);
+    setHostBookings([]);
+    setHostApplication(null);
   }, []);
+
+  const altPrice = useCallback(
+    (npr: number) => {
+      if (currency === "NPR") return null;
+      const converted = convertFromNpr(npr, currency, rates);
+      if (!converted) return null;
+      return `≈ ${formatMoney(converted.amount, currency)}`;
+    },
+    [currency, rates],
+  );
 
   const account = useMemo<Account>(
     () => ({
@@ -294,6 +524,8 @@ export function NestStoreProvider({ children }: { children: ReactNode }) {
       name: profile?.name ?? "Guest",
       email: profile?.email ?? user?.email ?? "",
       phone: profile?.phone ?? "",
+      avatarUrl: profile?.avatarUrl ?? null,
+      createdAt: profile?.createdAt ?? user?.created_at ?? null,
       signedIn: Boolean(user),
     }),
     [profile, user],
@@ -304,6 +536,8 @@ export function NestStoreProvider({ children }: { children: ReactNode }) {
       ready,
       user,
       account,
+      profile,
+      permissions,
       catalog,
       catalogLoading,
       propertyLookup,
@@ -313,15 +547,24 @@ export function NestStoreProvider({ children }: { children: ReactNode }) {
       bookings,
       addBooking,
       hostListings,
+      hostBookings,
       refreshHostListings,
       refreshCatalog,
       updateProfile,
+      hostApplication,
+      requestHostVerification,
+      currency,
+      setCurrency,
+      rates,
+      altPrice,
       signOut,
     }),
     [
       ready,
       user,
       account,
+      profile,
+      permissions,
       catalog,
       catalogLoading,
       propertyLookup,
@@ -330,9 +573,16 @@ export function NestStoreProvider({ children }: { children: ReactNode }) {
       bookings,
       addBooking,
       hostListings,
+      hostBookings,
       refreshHostListings,
       refreshCatalog,
       updateProfile,
+      hostApplication,
+      requestHostVerification,
+      currency,
+      setCurrency,
+      rates,
+      altPrice,
       signOut,
     ],
   );
