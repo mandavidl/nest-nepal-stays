@@ -51,7 +51,12 @@ export function PropertyCard({ property }: { property: Property }) {
             </div>
           </div>
           <div className="mt-3 flex flex-wrap gap-1.5">
-            {property.badges.slice(0, 3).map((b) => (
+            {property.petFriendly && (
+              <span className="rounded-full bg-cream px-2.5 py-1 text-[11px] font-semibold text-brand-deep">
+                🐾 Pet Friendly
+              </span>
+            )}
+            {property.badges.slice(0, property.petFriendly ? 2 : 3).map((b) => (
               <span
                 key={b}
                 className="rounded-full bg-cream px-2.5 py-1 text-[11px] font-semibold text-brand-deep"
