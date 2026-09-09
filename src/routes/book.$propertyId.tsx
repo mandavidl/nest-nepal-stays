@@ -8,7 +8,10 @@ import {
   ghostButtonClass,
   primaryButtonClass,
 } from "@/components/nest/Bits";
+import { AvailabilityCalendar } from "@/components/nest/AvailabilityCalendar";
+import { rangeIsFree, usePropertyAvailability } from "@/lib/availability";
 import { formatDate, formatNpr, nightsBetween, propertyById, quote } from "@/lib/nest-data";
+import { getPublicProperty } from "@/lib/properties.functions";
 import { useNest, type Booking } from "@/lib/nest-store";
 
 type BookSearch = { checkIn: string; checkOut: string; guests: number };
@@ -19,8 +22,9 @@ export const Route = createFileRoute("/book/$propertyId")({
     const str = (key: string) => (typeof search[key] === "string" ? (search[key] as string) : "");
     return { checkIn: str("checkIn"), checkOut: str("checkOut"), guests: guests > 0 ? guests : 1 };
   },
-  loader: ({ params }) => {
-    const property = propertyById(params.propertyId);
+  loader: async ({ params }) => {
+    const remote = await getPublicProperty({ data: { id: params.propertyId } }).catch(() => null);
+    const property = remote ?? propertyById(params.propertyId);
     if (!property) throw notFound();
     return { property };
   },
@@ -51,26 +55,41 @@ export const Route = createFileRoute("/book/$propertyId")({
 
 const steps = ["Dates", "Guests", "Review", "Price", "Confirm"] as const;
 
+const UNAVAILABLE = "These dates are no longer available. Please choose different dates.";
+
 function BookingFlow() {
   const { property } = Route.useLoaderData();
   const search = Route.useSearch();
   const navigate = useNavigate();
   const { addBooking } = useNest();
+  const availability = usePropertyAvailability(property);
 
   const [step, setStep] = useState(0);
   const [checkIn, setCheckIn] = useState(search.checkIn);
   const [checkOut, setCheckOut] = useState(search.checkOut);
   const [guests, setGuests] = useState(Math.min(search.guests, property.guests));
   const [confirmed, setConfirmed] = useState<Booking | null>(null);
+  const [busy, setBusy] = useState(false);
 
   const nights = nightsBetween(checkIn, checkOut);
   const q = quote(property, nights);
-  const canContinue = step === 0 ? nights > 0 : true;
+  const datesFree = rangeIsFree(checkIn, checkOut, availability);
+  const canContinue = step === 0 ? datesFree : true;
 
   const [bookingError, setBookingError] = useState("");
 
   const confirm = async () => {
+    setBusy(true);
+    setBookingError("");
     try {
+      // Dates may have been taken while this screen was open, so check the
+      // latest availability before submitting; the database checks again too.
+      const latest = await availability.refresh();
+      if (!rangeIsFree(checkIn, checkOut, { ...availability, blocked: latest })) {
+        setBookingError(UNAVAILABLE);
+        setStep(0);
+        return;
+      }
       const booking = await addBooking({
         propertyId: property.id,
         propertyName: property.name,
@@ -88,7 +107,15 @@ function BookingFlow() {
       });
       setConfirmed(booking);
     } catch (e) {
-      setBookingError(e instanceof Error ? e.message : "Booking could not be saved.");
+      const raw = e instanceof Error ? e.message : "";
+      setBookingError(
+        raw.includes("no longer available") || raw.includes("Check-out must be after")
+          ? UNAVAILABLE
+          : raw || "Booking could not be saved.",
+      );
+      await availability.refresh();
+    } finally {
+      setBusy(false);
     }
   };
 
