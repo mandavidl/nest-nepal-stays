@@ -28,6 +28,7 @@ export function HostVerification() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
   const status = permissions.hostStatus;
 
@@ -42,6 +43,21 @@ export function HostVerification() {
         <Link to="/login" className={`${primaryButtonClass} mt-4`}>
           Log in
         </Link>
+      </Panel>
+    );
+  }
+
+  if (submitted) {
+    return (
+      <Panel>
+        <h2 className="font-display text-xl font-semibold">
+          Verification request submitted. NestNepal will review your request.
+        </h2>
+        <p className="mt-2 text-[14px] leading-relaxed text-stone2">
+          Your request is now waiting for review. We will contact you on {phone || account.phone}{" "}
+          once a decision is made. You can keep browsing and booking stays as a guest.
+        </p>
+        <ContactDetails />
       </Panel>
     );
   }
@@ -74,6 +90,7 @@ export function HostVerification() {
     setBusy(true);
     try {
       await requestHostVerification(message.trim(), normalizeNepalPhone(phone));
+      setSubmitted(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Request could not be sent.");
     } finally {
@@ -87,7 +104,8 @@ export function HostVerification() {
         You&apos;re not currently listed as a verified host.
       </h2>
       <p className="mt-2 text-[14px] leading-relaxed text-stone2">
-        To list properties and start earning on NestNepal, you need to be manually verified.
+        To list properties and start earning on NestNepal, you need to be manually verified. This
+        happens once for your account — after that you can add as many properties as you like.
       </p>
       <ContactDetails />
       <form onSubmit={submit} className="mt-5 space-y-4">
