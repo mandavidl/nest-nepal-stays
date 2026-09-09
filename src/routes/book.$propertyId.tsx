@@ -218,32 +218,35 @@ function BookingFlow() {
             {step === 0 && (
               <>
                 <h1 className="font-display text-xl font-semibold">Choose your dates</h1>
-                <div className="mt-4 grid grid-cols-2 gap-2">
-                  <label className="rounded-2xl bg-cream px-3 py-2.5">
+                <AvailabilityCalendar
+                  availability={availability}
+                  selectable
+                  checkIn={checkIn}
+                  checkOut={checkOut}
+                  onSelect={(inDate, outDate) => {
+                    setCheckIn(inDate);
+                    setCheckOut(outDate);
+                    setBookingError("");
+                  }}
+                />
+                <div className="mt-3 grid grid-cols-2 gap-2 text-[13px]">
+                  <p className="rounded-2xl bg-cream px-3 py-2.5">
                     <span className="field-label">Check-in</span>
-                    <input
-                      type="date"
-                      value={checkIn}
-                      onChange={(e) => setCheckIn(e.target.value)}
-                      className="mt-0.5 w-full bg-transparent text-sm font-semibold outline-none"
-                    />
-                  </label>
-                  <label className="rounded-2xl bg-cream px-3 py-2.5">
+                    <span className="mt-0.5 block font-semibold">{checkIn || "Pick a date"}</span>
+                  </p>
+                  <p className="rounded-2xl bg-cream px-3 py-2.5">
                     <span className="field-label">Check-out</span>
-                    <input
-                      type="date"
-                      min={checkIn || undefined}
-                      value={checkOut}
-                      onChange={(e) => setCheckOut(e.target.value)}
-                      className="mt-0.5 w-full bg-transparent text-sm font-semibold outline-none"
-                    />
-                  </label>
+                    <span className="mt-0.5 block font-semibold">{checkOut || "Pick a date"}</span>
+                  </p>
                 </div>
                 <p className="mt-3 text-[13px] text-stone2">
-                  {nights > 0
+                  {datesFree
                     ? `${nights} night${nights > 1 ? "s" : ""} selected.`
-                    : "Pick a check-out date after your check-in date."}
+                    : "Pick available check-in and check-out dates from the calendar."}
                 </p>
+                {bookingError && (
+                  <p className="mt-2 text-[13px] font-semibold text-brand-deep">{bookingError}</p>
+                )}
               </>
             )}
 
@@ -344,8 +347,15 @@ function BookingFlow() {
                     <span className="font-display text-lg font-semibold">{formatNpr(q.total)}</span>
                   </div>
                 </dl>
-                <button onClick={confirm} className={`${primaryButtonClass} mt-5 w-full`}>
-                  Confirm booking
+                {bookingError && (
+                  <p className="mt-4 text-[13px] font-semibold text-brand-deep">{bookingError}</p>
+                )}
+                <button
+                  onClick={() => void confirm()}
+                  disabled={busy || !datesFree}
+                  className={`${primaryButtonClass} mt-5 w-full disabled:cursor-not-allowed disabled:opacity-40`}
+                >
+                  {busy ? "Checking availability…" : "Confirm booking"}
                 </button>
               </>
             )}
