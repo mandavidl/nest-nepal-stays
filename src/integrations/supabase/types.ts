@@ -498,6 +498,10 @@ export type Database = {
       is_approved_host: { Args: { _user_id: string }; Returns: boolean }
       is_staff: { Args: { _user_id: string }; Returns: boolean }
       my_permissions: { Args: never; Returns: Json }
+      property_blocked_dates: {
+        Args: { _property_id: string }
+        Returns: string[]
+      }
       remove_admin: { Args: { _user_id: string }; Returns: undefined }
       review_host_application: {
         Args: { _application_id: string; _decision: string; _note?: string }

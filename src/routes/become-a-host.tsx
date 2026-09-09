@@ -3,6 +3,7 @@ import { Shell } from "@/components/nest/Shell";
 import { Panel, brandButtonClass, ghostButtonClass } from "@/components/nest/Bits";
 import { formatNpr } from "@/lib/nest-data";
 import hostHero from "@/assets/host-hero.jpg";
+import { HostVerification } from "@/components/nest/HostVerification";
 
 export const Route = createFileRoute("/become-a-host")({
   head: () => ({
@@ -54,11 +55,11 @@ function BecomeHost() {
               calendar.
             </p>
             <div className="mt-6 flex flex-wrap gap-2">
-              <Link to="/host" className={brandButtonClass}>
-                Open host dashboard
-              </Link>
+              <a href="#host-verification" className={brandButtonClass}>
+                Request host verification
+              </a>
               <Link to="/host" className={ghostButtonClass}>
-                Add a property
+                Open host dashboard
               </Link>
             </div>
           </div>
@@ -70,6 +71,10 @@ function BecomeHost() {
             className="aspect-[16/10] w-full rounded-3xl border border-sand object-cover shadow-card"
           />
         </div>
+      </section>
+
+      <section id="host-verification" className="mx-auto mt-12 max-w-3xl px-5">
+        <HostVerification />
       </section>
 
       <section className="mx-auto mt-12 max-w-6xl px-5">

@@ -1,0 +1,1 @@
+DELETE FROM public.bookings WHERE property_id = 'mountain-view-apartment';

@@ -8,7 +8,10 @@ import {
   ghostButtonClass,
   primaryButtonClass,
 } from "@/components/nest/Bits";
+import { AvailabilityCalendar } from "@/components/nest/AvailabilityCalendar";
+import { rangeIsFree, usePropertyAvailability } from "@/lib/availability";
 import { formatDate, formatNpr, nightsBetween, propertyById, quote } from "@/lib/nest-data";
+import { getPublicProperty } from "@/lib/properties.functions";
 import { useNest, type Booking } from "@/lib/nest-store";
 
 type BookSearch = { checkIn: string; checkOut: string; guests: number };
@@ -19,8 +22,9 @@ export const Route = createFileRoute("/book/$propertyId")({
     const str = (key: string) => (typeof search[key] === "string" ? (search[key] as string) : "");
     return { checkIn: str("checkIn"), checkOut: str("checkOut"), guests: guests > 0 ? guests : 1 };
   },
-  loader: ({ params }) => {
-    const property = propertyById(params.propertyId);
+  loader: async ({ params }) => {
+    const remote = await getPublicProperty({ data: { id: params.propertyId } }).catch(() => null);
+    const property = remote ?? propertyById(params.propertyId);
     if (!property) throw notFound();
     return { property };
   },
@@ -51,26 +55,41 @@ export const Route = createFileRoute("/book/$propertyId")({
 
 const steps = ["Dates", "Guests", "Review", "Price", "Confirm"] as const;
 
+const UNAVAILABLE = "These dates are no longer available. Please choose different dates.";
+
 function BookingFlow() {
   const { property } = Route.useLoaderData();
   const search = Route.useSearch();
   const navigate = useNavigate();
   const { addBooking } = useNest();
+  const availability = usePropertyAvailability(property);
 
   const [step, setStep] = useState(0);
   const [checkIn, setCheckIn] = useState(search.checkIn);
   const [checkOut, setCheckOut] = useState(search.checkOut);
   const [guests, setGuests] = useState(Math.min(search.guests, property.guests));
   const [confirmed, setConfirmed] = useState<Booking | null>(null);
+  const [busy, setBusy] = useState(false);
 
   const nights = nightsBetween(checkIn, checkOut);
   const q = quote(property, nights);
-  const canContinue = step === 0 ? nights > 0 : true;
+  const datesFree = rangeIsFree(checkIn, checkOut, availability);
+  const canContinue = step === 0 ? datesFree : true;
 
   const [bookingError, setBookingError] = useState("");
 
   const confirm = async () => {
+    setBusy(true);
+    setBookingError("");
     try {
+      // Dates may have been taken while this screen was open, so check the
+      // latest availability before submitting; the database checks again too.
+      const latest = await availability.refresh();
+      if (!rangeIsFree(checkIn, checkOut, { ...availability, blocked: latest })) {
+        setBookingError(UNAVAILABLE);
+        setStep(0);
+        return;
+      }
       const booking = await addBooking({
         propertyId: property.id,
         propertyName: property.name,
@@ -88,7 +107,15 @@ function BookingFlow() {
       });
       setConfirmed(booking);
     } catch (e) {
-      setBookingError(e instanceof Error ? e.message : "Booking could not be saved.");
+      const raw = e instanceof Error ? e.message : "";
+      setBookingError(
+        raw.includes("no longer available") || raw.includes("Check-out must be after")
+          ? UNAVAILABLE
+          : raw || "Booking could not be saved.",
+      );
+      await availability.refresh();
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -191,32 +218,35 @@ function BookingFlow() {
             {step === 0 && (
               <>
                 <h1 className="font-display text-xl font-semibold">Choose your dates</h1>
-                <div className="mt-4 grid grid-cols-2 gap-2">
-                  <label className="rounded-2xl bg-cream px-3 py-2.5">
+                <AvailabilityCalendar
+                  availability={availability}
+                  selectable
+                  checkIn={checkIn}
+                  checkOut={checkOut}
+                  onSelect={(inDate, outDate) => {
+                    setCheckIn(inDate);
+                    setCheckOut(outDate);
+                    setBookingError("");
+                  }}
+                />
+                <div className="mt-3 grid grid-cols-2 gap-2 text-[13px]">
+                  <p className="rounded-2xl bg-cream px-3 py-2.5">
                     <span className="field-label">Check-in</span>
-                    <input
-                      type="date"
-                      value={checkIn}
-                      onChange={(e) => setCheckIn(e.target.value)}
-                      className="mt-0.5 w-full bg-transparent text-sm font-semibold outline-none"
-                    />
-                  </label>
-                  <label className="rounded-2xl bg-cream px-3 py-2.5">
+                    <span className="mt-0.5 block font-semibold">{checkIn || "Pick a date"}</span>
+                  </p>
+                  <p className="rounded-2xl bg-cream px-3 py-2.5">
                     <span className="field-label">Check-out</span>
-                    <input
-                      type="date"
-                      min={checkIn || undefined}
-                      value={checkOut}
-                      onChange={(e) => setCheckOut(e.target.value)}
-                      className="mt-0.5 w-full bg-transparent text-sm font-semibold outline-none"
-                    />
-                  </label>
+                    <span className="mt-0.5 block font-semibold">{checkOut || "Pick a date"}</span>
+                  </p>
                 </div>
                 <p className="mt-3 text-[13px] text-stone2">
-                  {nights > 0
+                  {datesFree
                     ? `${nights} night${nights > 1 ? "s" : ""} selected.`
-                    : "Pick a check-out date after your check-in date."}
+                    : "Pick available check-in and check-out dates from the calendar."}
                 </p>
+                {bookingError && (
+                  <p className="mt-2 text-[13px] font-semibold text-brand-deep">{bookingError}</p>
+                )}
               </>
             )}
 
@@ -317,8 +347,15 @@ function BookingFlow() {
                     <span className="font-display text-lg font-semibold">{formatNpr(q.total)}</span>
                   </div>
                 </dl>
-                <button onClick={confirm} className={`${primaryButtonClass} mt-5 w-full`}>
-                  Confirm booking
+                {bookingError && (
+                  <p className="mt-4 text-[13px] font-semibold text-brand-deep">{bookingError}</p>
+                )}
+                <button
+                  onClick={() => void confirm()}
+                  disabled={busy || !datesFree}
+                  className={`${primaryButtonClass} mt-5 w-full disabled:cursor-not-allowed disabled:opacity-40`}
+                >
+                  {busy ? "Checking availability…" : "Confirm booking"}
                 </button>
               </>
             )}

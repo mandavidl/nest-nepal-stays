@@ -13,6 +13,7 @@ import { properties as demoProperties, type CategoryId, type Property } from "./
 import { mapRowToProperty, orderedPhotoPaths, type PropertyRow } from "./property-mapper";
 import { signPhotoPaths } from "./nest-photos";
 import { getExchangeRates } from "./currency.functions";
+import { notifyOwnerHostRequest } from "./notify.functions";
 import {
   convertFromNpr,
   formatMoney,
@@ -472,19 +473,35 @@ export function NestStoreProvider({ children }: { children: ReactNode }) {
   const requestHostVerification = useCallback(
     async (message: string, phone: string) => {
       if (!user) throw new Error("Please log in first.");
+      if (permissions.hostStatus === "pending")
+        throw new Error("Your host verification request is already being reviewed.");
+      if (permissions.hostStatus === "approved")
+        throw new Error("You are already a verified host.");
+
+      // Keep the saved profile phone in step with the number given here.
+      if (phone && phone !== profile?.phone) {
+        await supabase.from("profiles").update({ phone_number: phone }).eq("id", user.id);
+      }
+
       const { data, error } = await supabase
         .from("host_applications")
         .insert({
           user_id: user.id,
-          full_name: profile?.name ?? "",
-          email: profile?.email ?? user.email ?? "",
+          full_name: profile?.name || (user.email?.split("@")[0] ?? ""),
+          email: profile?.email || user.email || "",
           phone_number: phone,
           message,
           status: "pending",
         })
         .select("id, status, message, decision_note, created_at")
         .single();
-      if (error) throw new Error(error.message);
+      if (error) {
+        throw new Error(
+          error.code === "23505" || error.message.includes("host_applications_one_pending")
+            ? "Your host verification request is already being reviewed."
+            : error.message,
+        );
+      }
       setHostApplication({
         id: data.id,
         status: data.status as HostApplication["status"],
@@ -492,9 +509,12 @@ export function NestStoreProvider({ children }: { children: ReactNode }) {
         decisionNote: data.decision_note,
         createdAt: data.created_at,
       });
+      // Notification only — approval always happens in the admin dashboard, and a
+      // failed notification must never lose the request.
+      void notifyOwnerHostRequest().catch(() => undefined);
       await Promise.all([loadPermissions(), loadProfile(user)]);
     },
-    [user, profile, loadPermissions, loadProfile],
+    [user, profile, permissions.hostStatus, loadPermissions, loadProfile],
   );
 
   const signOut = useCallback(async () => {

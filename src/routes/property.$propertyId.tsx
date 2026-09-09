@@ -2,18 +2,17 @@ import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-ro
 import { useState } from "react";
 import { Shell } from "@/components/nest/Shell";
 import { Panel, Stars, VerifiedBadge, primaryButtonClass } from "@/components/nest/Bits";
-import {
-  formatNpr,
-  nightsBetween,
-  propertyById,
-  quote,
-  type Property,
-} from "@/lib/nest-data";
+import { AvailabilityCalendar } from "@/components/nest/AvailabilityCalendar";
+import { rangeIsFree, usePropertyAvailability } from "@/lib/availability";
+import { formatNpr, nightsBetween, propertyById, quote } from "@/lib/nest-data";
+import { getPublicProperty } from "@/lib/properties.functions";
+import { formatNepalPhone } from "@/lib/nest-validation";
 import { useNest } from "@/lib/nest-store";
 
 export const Route = createFileRoute("/property/$propertyId")({
-  loader: ({ params }) => {
-    const property = propertyById(params.propertyId);
+  loader: async ({ params }) => {
+    const remote = await getPublicProperty({ data: { id: params.propertyId } }).catch(() => null);
+    const property = remote ?? propertyById(params.propertyId);
     if (!property) throw notFound();
     return { property };
   },
@@ -55,10 +54,12 @@ function PropertyDetail() {
   const [checkIn, setCheckIn] = useState("");
   const [checkOut, setCheckOut] = useState("");
   const [guests, setGuests] = useState(2);
+  const availability = usePropertyAvailability(property);
 
   const nights = nightsBetween(checkIn, checkOut);
   const q = quote(property, nights);
   const saved = isFavorite(property.id);
+  const datesFree = rangeIsFree(checkIn, checkOut, availability);
 
   const reserve = () =>
     navigate({
@@ -199,11 +200,44 @@ function PropertyDetail() {
             </Panel>
 
             <Panel>
+              <h2 className="font-display text-lg font-semibold">Pets</h2>
+              {property.petFriendly ? (
+                <div className="mt-2 space-y-2 text-[14px] text-stone2">
+                  <p className="font-semibold text-ink">🐾 Pets are welcome here</p>
+                  {property.petTypes.length > 0 && <p>Allowed: {property.petTypes.join(", ")}</p>}
+                  {property.petRules && <p>Pet rules: {property.petRules}</p>}
+                  <p>
+                    {property.petFee > 0
+                      ? `Additional pet fee: ${formatNpr(property.petFee)} per stay.`
+                      : "No additional pet fee."}
+                  </p>
+                </div>
+              ) : (
+                <p className="mt-2 text-[14px] text-stone2">
+                  Pets are not allowed at this property.
+                </p>
+              )}
+            </Panel>
+
+            <Panel>
+              <h2 className="font-display text-lg font-semibold">Contact the host</h2>
+              <p className="mt-2 text-[14px] text-stone2">
+                {property.host.name} ·{" "}
+                <a
+                  href={`tel:${property.host.phone}`}
+                  className="font-semibold text-brand-deep"
+                >
+                  {formatNepalPhone(property.host.phone)}
+                </a>
+              </p>
+            </Panel>
+
+            <Panel>
               <h2 className="font-display text-lg font-semibold">Availability</h2>
               <p className="mt-1 text-[13px] text-stone2">
-                Shaded dates are already booked this month.
+                Crossed-out dates are already booked or blocked by the host.
               </p>
-              <Calendar property={property} />
+              <AvailabilityCalendar availability={availability} />
             </Panel>
 
             <Panel>
@@ -260,27 +294,29 @@ function PropertyDetail() {
                 </p>
               </div>
 
-              <div className="mt-4 grid grid-cols-2 gap-2">
-                <label className="rounded-2xl bg-cream px-3 py-2.5">
-                  <span className="field-label">Check-in</span>
-                  <input
-                    type="date"
-                    value={checkIn}
-                    onChange={(e) => setCheckIn(e.target.value)}
-                    className="mt-0.5 w-full bg-transparent text-sm font-semibold outline-none"
-                  />
-                </label>
-                <label className="rounded-2xl bg-cream px-3 py-2.5">
-                  <span className="field-label">Check-out</span>
-                  <input
-                    type="date"
-                    min={checkIn || undefined}
-                    value={checkOut}
-                    onChange={(e) => setCheckOut(e.target.value)}
-                    className="mt-0.5 w-full bg-transparent text-sm font-semibold outline-none"
-                  />
-                </label>
-                <label className="col-span-2 rounded-2xl bg-cream px-3 py-2.5">
+              <div className="mt-4">
+                <p className="field-label">Select your dates</p>
+                <AvailabilityCalendar
+                  availability={availability}
+                  selectable
+                  checkIn={checkIn}
+                  checkOut={checkOut}
+                  onSelect={(inDate, outDate) => {
+                    setCheckIn(inDate);
+                    setCheckOut(outDate);
+                  }}
+                />
+                <div className="mt-3 grid grid-cols-2 gap-2 text-[13px]">
+                  <p className="rounded-2xl bg-cream px-3 py-2.5">
+                    <span className="field-label">Check-in</span>
+                    <span className="mt-0.5 block font-semibold">{checkIn || "Pick a date"}</span>
+                  </p>
+                  <p className="rounded-2xl bg-cream px-3 py-2.5">
+                    <span className="field-label">Check-out</span>
+                    <span className="mt-0.5 block font-semibold">{checkOut || "Pick a date"}</span>
+                  </p>
+                </div>
+                <label className="mt-2 block rounded-2xl bg-cream px-3 py-2.5">
                   <span className="field-label">Guests</span>
                   <select
                     value={guests}
@@ -320,7 +356,7 @@ function PropertyDetail() {
 
               <button
                 onClick={reserve}
-                disabled={nights === 0}
+                disabled={!datesFree}
                 className={`${primaryButtonClass} mt-4 w-full disabled:cursor-not-allowed disabled:opacity-40`}
               >
                 Reserve
@@ -345,28 +381,3 @@ function Row({ label, value }: { label: string; value: string }) {
   );
 }
 
-function Calendar({ property }: { property: Property }) {
-  const days = Array.from({ length: 30 }, (_, i) => i + 1);
-  return (
-    <div className="mt-4 grid grid-cols-7 gap-1.5">
-      {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
-        <span key={`${d}-${i}`} className="text-center text-[11px] font-semibold text-stone2">
-          {d}
-        </span>
-      ))}
-      {days.map((d) => {
-        const booked = property.bookedDays.includes(d);
-        return (
-          <span
-            key={d}
-            className={`grid aspect-square place-items-center rounded-xl text-[12px] font-semibold ${
-              booked ? "bg-sand text-stone2 line-through" : "bg-cream text-ink"
-            }`}
-          >
-            {d}
-          </span>
-        );
-      })}
-    </div>
-  );
-}

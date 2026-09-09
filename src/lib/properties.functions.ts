@@ -33,8 +33,7 @@ export const getPublicProperties = createServerFn({ method: "GET" }).handler(
     const { data, error } = await client
       .from("properties")
       .select("*")
-      .eq("approval_status", "approved")
-      .eq("status", "published")
+      .eq("property_status", "published")
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     const rows = (data ?? []) as unknown as PropertyRow[];
@@ -51,8 +50,7 @@ export const getPublicProperty = createServerFn({ method: "GET" })
       .from("properties")
       .select("*")
       .eq("id", data.id)
-      .eq("approval_status", "approved")
-      .eq("status", "published")
+      .eq("property_status", "published")
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!row) return null;
