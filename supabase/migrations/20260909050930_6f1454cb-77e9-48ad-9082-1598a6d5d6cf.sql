@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.validate_booking_dates() FROM anon, authenticated, PUBLIC;
