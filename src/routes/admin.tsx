@@ -204,7 +204,11 @@ function HostApplications() {
             <div key={r.id} className="rounded-2xl bg-cream p-4">
               <p className="font-semibold">{r.full_name || "Unnamed guest"}</p>
               <p className="mt-0.5 text-[13px] text-stone2">
-                {r.email} · {r.phone_number}
+                {r.email} · {r.phone_number || "no number given"}
+              </p>
+              <p className="mt-0.5 text-[12px] text-stone2">
+                Requested {new Date(r.created_at).toLocaleString()} · status {r.status} · ref{" "}
+                {r.id.slice(0, 8)} · user {r.user_id.slice(0, 8)}
               </p>
               {r.message && <p className="mt-2 text-[14px] text-stone2">{r.message}</p>}
               <div className="mt-3 flex flex-wrap gap-2">
