@@ -51,7 +51,7 @@ export function HostVerification() {
     return (
       <Panel>
         <h2 className="font-display text-xl font-semibold">
-          Verification request submitted. NestNepal will review your request.
+          Verification request submitted. Your request is pending review.
         </h2>
         <p className="mt-2 text-[14px] leading-relaxed text-stone2">
           Your request is now waiting for review. We will contact you on {phone || account.phone}{" "}
